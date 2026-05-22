@@ -1,0 +1,23 @@
+:root {
+    --accent: #646cff;
+    --accent-bg: #1a1a1a;
+    --accent-border:#646cff;
+    --text:#fff;
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body{
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui , sans-serif;
+    background: #0f0f0f;
+    color: var(--text);
+    display: flex;
+    place-items: center;
+    justify-content: center;
+}

@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: panchat-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: panchat
+      POSTGRES_PASSWORD: panchat
+      POSTGRES_DB: panchat
+    ports:
+      - "5433:5432"
+    volumes:
+      - panchat_pg_data:/var/lib/postgresql/data
+
+volumes:
+  panchat_pg_data:

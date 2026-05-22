@@ -1,0 +1,10 @@
+{
+    "name": "panchat",
+    "private": true,
+    "version": "0.0.0",
+    "description": "PanChat - LAN messaging with inline tasks",
+    "scripts": {
+        "dev:web": "pnpm --filter @panchat/web dev",
+        "dev:api": "pnpm --filter @panchat/api dev"
+    }
+}

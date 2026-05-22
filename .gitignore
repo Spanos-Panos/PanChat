@@ -1,0 +1,26 @@
+#Dependencies
+node_modules/
+
+#Environment secrets
+.env
+.env.local
+.env.*.local
+
+#Build
+dist/
+build/
+
+#Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+#OS junk
+.DS_Store
+Thumbs.db 
+
+#Editor 
+.vscode/*
+!.vscode/extensions.json
+
+#Prisma
