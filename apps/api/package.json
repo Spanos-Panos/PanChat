@@ -12,12 +12,16 @@
       "@fastify/cors": "^11.0.0",
       "dotenv": "^16.4.7",
       "fastify": "^5.2.1",
-      "@prisma/client": "^6.19.0"
+      "@prisma/client": "^6.19.0",
+      "bcrypt": "^5.1.1",
+      "@fastify/cookie": "^11.0.2",
+      "@fastify/jwt": "^9.0.4"
     },
     "devDependencies": {
       "@types/node": "^22.10.7",
       "tsx": "^4.19.2",
       "typescript": "^5.7.3",
-      "prisma": "^6.19.0"
+      "prisma": "^6.19.0",
+      "@types/bcrypt": "^5.0.2"
     }
   }

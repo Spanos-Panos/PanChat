@@ -3,7 +3,7 @@
 > **Companion to:** [`thread-task-chat-brief.md`](./thread-task-chat-brief.md) (product spec, stack, MVP scope)  
 > **Purpose:** Track **how Panos learns**, what he knows / is learning / is weak on, session notes, and **quizzes** — so any AI agent or future you can continue teaching without starting from zero.  
 > **Last updated:** 2026-05-21  
-> **Phase:** 0 — monorepo scaffold (step **0.13** next; Quiz 2 ✅)
+> **Phase:** 1 **in progress** — register, login, `/me` working in Postman
 
 ---
 
@@ -51,7 +51,7 @@
 
 | Topic | Level | Evidence / notes |
 |-------|-------|------------------|
-| Git / GitHub | 🟡 | `.gitignore` done; `git init` not yet (step 0.13) |
+| Git / GitHub | 🟡 | First commit + push done; wants to practice daily workflow |
 | pnpm / monorepo | 🟡 | Quiz 1: knows `dev:web` + `@panchat/web`; deepen workspace YAML meaning |
 | `.env` / secrets | 🟡 | Asked strong questions; fixed `Thumbs.db` typo after review |
 | React + Vite | 🟡 | Vite 8 + React 19 in `apps/web`; dev server verified |
@@ -72,6 +72,7 @@
 - Docker commands and “what is a container” — teach when 0.6 lands
 - Prisma migrations vs `schema.prisma` — teach at 0.10–0.11
 - Rushing ahead without verifying in terminal — remind to paste output
+- **Refactors / extract helper** — easy to delete business logic while moving auth (e.g. `requireUser` ok but `PATCH /profile` body lost). Use **small steps + re-test same Postman flow** after each move.
 
 ### Strengths to leverage
 
@@ -98,7 +99,7 @@
 | 0.10 Prisma User | [x] | 2026-05-21 | schema + `apps/api/.env` → Docker Postgres URL |
 | 0.11 migrate + `/health/db` | [x] | 2026-05-22 | migrate `init_users`; port 5433; `/health/db` OK; fix `NODE.ENV` typo |
 | 0.12 README | [x] | 2026-05-22 | Agent-written `README.md` (author requested) |
-| 0.13 git + GitHub | [ ] | | **NEXT** |
+| 0.13 git + GitHub | [x] | 2026-05-22 | `af796ae` on `main`; pushed to `Spanos-Panos/PanChat` (private) |
 | 0.12 README | [ ] | | |
 | 0.13 git + GitHub | [ ] | | |
 
@@ -116,7 +117,24 @@
 - **0.6 done:** Postgres in Docker; read error → fixed restart policy typo.
 - **0.9 done:** `/health` → `{"ok":true}`.
 - **Q16:** Quiz and build progress in **separate** messages; Quiz 2 pending.
-- **Next:** 0.10 Prisma → 0.11 migrate; then **“let’s do Quiz 2”**.
+- **0.13 done:** GitHub `Spanos-Panos/PanChat`, branch `main`.
+- **Phase 0 complete.** Phase **1.1** auth packages installed (bcrypt, cookie, jwt).
+- **Phase 1.2 done:** `@fastify/cookie` + `@fastify/jwt` wired after CORS; `JWT_SECRET` guard.
+- **Phase 1.3 done:** `POST /api/v1/auth/register` — bcrypt hash, Prisma create, JWT cookie, tested in Postman (201).
+- **Phase 1.4 done:** `POST /api/v1/auth/login` — find user, `bcrypt.compare`, JWT cookie, tested (200).
+- **Phase 1.6 done:** `GET /api/v1/auth/me` — read cookie, verify JWT, return current user (200).
+- **Phase 1.7 done:** `POST /api/v1/auth/logout` — clear cookie; `/me` → 401 after logout.
+- **Quiz 4 done** (2026-05-24, strict 4/7).
+- **Phase 1b:** `PATCH /auth/me/profile` + `lib/auth.ts` `requireUser`; refactor regression caught and fixed.
+- **Phase 1b done:** `GET /api/v1/users` returns public list (`id, username, displayName, avatarUrl`), sorted; tested with 2 users.
+- **Phase 2.1 done:** Prisma `Thread` + `Message` models; migration `add_threads_messages`; fixed P1001 (Docker not running).
+- **Teaching note:** Prisma relations need **both** models updated — spell out User back-relations every time.
+- **Phase 2.2 done:** `POST /api/v1/threads` — `orderUserPair` + `upsert`; tested panos ↔ mitsos thread.
+- **Phase 2.3 done:** `POST /threads/:id/messages` — participant check, create message (201); fixed `userHighId` typo.
+- **Phase 2.4 done:** `GET /threads/:id/messages` — history for both participants (panos + mitsos).
+- **Phase 2.5 done:** `GET /threads` — inbox with peer + `lastMessage`; fixed Prisma `' desc'` typo.
+- **Phase 2 API chat MVP complete** (threads + messages, no tasks/WebSocket yet).
+- **Next:** React UI for chat, or tasks, or WebSocket realtime.
 
 ---
 
@@ -138,8 +156,8 @@
 |------|--------------|------|--------|
 | **Quiz 1** | 0.0–0.4 | After 0.4 | ✅ done 2026-05-21 |
 | **Quiz 2** | 0.5–0.9 | After 0.9 | ✅ done 2026-05-22 |
-| **Quiz 3** | 0.10–0.13 | After 0.13 | ⬜ |
-| **Quiz 4** | Phase 1 auth | After Phase 1 auth works | ⬜ |
+| **Quiz 3** | 0.10–0.13 | After 0.13 | ✅ done 2026-05-22 (strict grade) |
+| **Quiz 4** | Phase 1 auth | After Phase 1 auth works | ✅ done 2026-05-24 |
 
 ---
 
@@ -183,6 +201,42 @@
 **Sharpen #4:** **`.env.example` → YES GitHub.** **`.env` → NEVER GitHub** (secrets).
 
 **Sharpen #6:** CORS = browser permission for cross-origin requests; see chat explanation 2026-05-22.
+
+### Quiz 3 — after step 0.13 (2026-05-22, strict)
+
+| # | Topic | Panos answer | ✅ / 🟡 / ❌ |
+|---|-------|--------------|-------------|
+| 1 | schema vs migration vs `users` table | Unsure; guessed schema + SQL file | 🟡 |
+| 2 | `migrate dev --name` | pnpm tool “creates database” | 🟡 |
+| 3 | Port 5433 | Avoid two DBs on same port | ✅ |
+| 4 | Two `.env` files | Root secrets; thought `index.ts` uses `apps/api/.env` | ❌ |
+| 5 | `/health` vs `/health/db` | DB connected check | ✅ |
+| 6 | `lib/prisma.ts` singleton | Don’t know | ❌ |
+| 7 | Git commit safety + git vs GitHub | No `.env`; local vs remote | ✅ |
+
+**Score (strict):** **4/7** — concepts OK on 1, 3, 5, 7; **review 2, 4, 6 before Phase 1b** (status codes + `sub` in `/me`).
+
+### Quiz 4 — Phase 1 auth (2026-05-24)
+
+| # | Topic | Panos answer | ✅ / 🟡 / ❌ |
+|---|-------|--------------|-------------|
+| 1 | bcrypt hash vs compare | Saves password safe/encrypted; compare checks hashed | 🟡 |
+| 2 | JWT `sub` + `/me` | Subject yes; `/me` usage unsure | 🟡 |
+| 3 | httpOnly cookie | JS can't read easily | ✅ |
+| 4 | Status codes A–E | A=200, B=200, C=201, D=401, E=404/409 | ❌ |
+| 5 | `/me` flow | cookie → verify → load user by unique id | 🟡 |
+| 6 | After logout `/me` | 404 — no token saved | 🟡 |
+| 7 | Same login error message | Email missing → password wouldn't exist | 🟡 |
+
+**Sharpen #1:** **Hash ≠ encrypt.** Hash is **one-way** (can't get password back). `bcrypt.compare(plain, hash)` → **`true`** or **`false`**.
+
+**Sharpen #2:** `sub` = **subject** = **user id**. In `/me`: `payload.sub` → `prisma.user.findUnique({ where: { id: payload.sub } })`.
+
+**Sharpen #4:** A=**201**, B=**200**, C=**409**, D=**401**, E=**401** (not 404 — route exists, you're just not logged in).
+
+**Sharpen #6:** Logout **clears cookie** → no token → **401 Not authenticated**. User still in DB.
+
+**Sharpen #7:** Also **security**: same message so attackers can't probe which emails are registered.
 
 ---
 

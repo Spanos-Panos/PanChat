@@ -4,5 +4,7 @@ packages:
 allowBuilds:
   esbuild: true
   prisma: true
+  bcrypt: true
   '@prisma/client': true
   '@prisma/engines': true
+  

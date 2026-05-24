@@ -776,7 +776,7 @@ Better than the reference app’s “mediocre” frontend — achieved through *
 
 | Phase | Deliverable | Estimate |
 |-------|-------------|----------|
-| **0** | Monorepo + Docker Postgres + Prisma + health routes (**author implements** — §21.2) | in progress |
+| **0** | Monorepo + Docker Postgres + Prisma + health routes (**author implements** — §21.2) | **done** |
 | **1** | Monorepo; Docker Compose; Postgres; Prisma; **email register/login** | 3–5 days |
 | **1b** | **Profile onboarding** UI + API (username, birth date, avatar upload) | 2–4 days |
 | **2** | User list (avatar + username); create/get 1-1 thread | 2–3 days |
@@ -951,7 +951,7 @@ Check off in chat; ask agent to mark `[x]` here when you complete each step.
 | 0.10 | **Prisma** in `apps/api` — `User` model (email, password_hash, profile fields per §12) | [x] |
 | 0.11 | `prisma migrate dev` — tables exist; `GET /health/db` checks DB connection | [x] |
 | 0.12 | Root README: how to run db + api + web (three terminals or scripts) | [x] |
-| 0.13 | `git init` → first commit → optional: private **GitHub** repo + `git push` (§14.1) | [ ] |
+| 0.13 | `git init` → first commit → optional: private **GitHub** repo + `git push` (§14.1) | [x] |
 
 **Phase 0 done when:** Postgres in Docker, API health + DB health work, Vite app runs — all **written by you**.
 
