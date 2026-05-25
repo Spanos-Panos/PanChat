@@ -987,7 +987,7 @@ Check off in chat; ask agent to mark `[x]` here when you complete each step.
 
 | Wave | Focus | Git commit after? |
 |------|--------|-------------------|
-| **A** | Checkpoint: Phase 3 web (`apps/web`, `api.ts`) | **Yes — Panos runs** |
+| **A** | Checkpoint: Phase 3 web (`apps/web`, `api.ts`) | ✅ `f6a335b` |
 | **B** | UI polish + responsive (phone + desktop) | **Yes — Panos runs** |
 | **C** | Register + profile onboarding **UI** | optional mid-wave |
 | **D** | Avatar API + UI | |

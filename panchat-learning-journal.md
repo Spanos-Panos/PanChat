@@ -62,7 +62,7 @@
 
 | Topic | Level | Evidence / notes |
 |-------|-------|------------------|
-| Git / GitHub | 🟡 | Phase 0 commit `af796ae`; Phase 1–2 commit `132d466` on `main` — **wants to run git commands himself** going forward |
+| Git / GitHub | 🟡 | `af796ae` Phase 0 · `132d466` API · `f6a335b` Phase 3 web — Panos runs commit/push himself |
 | pnpm / monorepo | 🟡 | Quiz 1: knows `dev:web` + `@panchat/web`; deepen workspace YAML meaning |
 | `.env` / secrets | 🟡 | Asked strong questions; fixed `Thumbs.db` typo after review |
 | React + Vite | 🟡 | Vite 8 + React 19 in `apps/web`; dev server verified |
@@ -164,7 +164,8 @@
 - **E2E test (2026-05-24):** Normal window (panos) + incognito (mitsos) — both see history; sender labels You vs peer correct; real reply delivered.
 - **Phase 3.6 done:** Logout button — `POST /auth/logout`, clear state, refresh stays logged out.
 - **Phase 3 web MVP done:** login, session, users, thread, messages, logout (styling later).
-- **Roadmap agreed (2026-05-24):** git → styling → git → features → harden — see **§11**.
+- **Wave A git done:** `f6a335b` Phase 3 web pushed to `main` (Panos ran commands).
+- **Roadmap:** Wave B styling next — see **§11**.
 
 ### 2026-05-21 — Phase 0 start
 
@@ -303,7 +304,7 @@
 
 **Order locked** — one small step per session; **git = Panos runs commands** (agent teaches only).
 
-### Wave A — Git checkpoint (Phase 3 web) ← **start here**
+### Wave A — Git checkpoint (Phase 3 web) ✅ **done 2026-05-24** (`f6a335b`)
 
 | Step | What |
 |------|------|
@@ -311,7 +312,15 @@
 | A.2 | `git add` + `git commit` — web client + chat UI |
 | A.3 | `git push origin main` |
 
-### Wave B — Styling pass (freeze features)
+### Wave B — Styling pass (in progress)
+
+| Step | Done |
+|------|------|
+| B.1 App shell layout | [x] |
+| B.2 Message bubbles L/R | [x] |
+| B.2b Login card | [x] |
+| B.3 Responsive | [ ] ← next |
+| B.4 Re-test 2 users | [ ] |
 
 | Step | What |
 |------|------|

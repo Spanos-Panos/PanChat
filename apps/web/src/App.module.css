@@ -1,4 +1,148 @@
-/* Panchat scoped styles*/
+.app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom:1px solid #2a2a2a;
+}
+
+.headerMeta {
+    font-size:0.875rem;
+    color: #3a3a3a;
+}
+
+.body{
+    flex: 1;
+    display: flex;
+    min-height: 0;
+}
+
+.sidebar{
+    width: 260px;
+    flex-shrink: 0;
+    border-right: 1px solid #2a2a2a;
+    padding: 0.75rem;
+    overflow-y: auto;
+}
+
+.sidebarTitle {
+    margin: 0 0 0 0.75rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08rem;
+    color: #737373;
+}
+
+.userList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.useBottom {
+    width: 100%;
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+
+.useBottom:hover:not(:disabled){
+    background: #1a1a1a;
+}
+
+.useBottomActive {
+    background: #1a293b;
+    border-color: #334155;
+}
+
+.useButton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.chatPanel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.chatEmpty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #737373;
+}
+
+.chatHeader {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #2a2a2a;
+    margin: 0;
+    font-size: 1rem;
+}
+
+.messages {
+    flex: 1;
+    overflow-y: auto;
+    list-style: none;
+    margin: 0;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; 
+    gap: 0.5rem;
+}
+
+.messageItem {
+    max-width: 75%;
+    padding: 0.5rem 0.75rem;
+    border-radius: 12px;
+    background: #262626;
+    align-self: flex-start;
+}
+
+.messageMine {
+    align-self: flex-end;
+    background: #1e3a5f;
+}
+
+.composer {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #2a2a2a;
+}
+
+.composer input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #333;
+    background: #141414;
+    color: inherit;
+}
+
+.errorText {
+    color: #f87171;
+    font-size: 0.875rem;
+    margin: 0.5rem 0 0;
+}
+
 .panChatTitle {
     color:#2563eb;
     letter-spacing:0.02em;
@@ -23,3 +167,92 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
+
+.authPage {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.authCard {
+    width: 100%;
+    max-width: 400px;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #2a2a2a;
+    background: #141414;
+}
+
+.authCard h1 {
+    margin: 0 0 0.25rem;
+}
+
+.authSubtitle{
+    margin: 0 0 1.25rem;
+    font-size: 0.875rem;
+    color: #737373;
+}
+
+.authForm {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.authForm input {
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #333;
+    background: #0f0f0f;
+    color: inherit
+}
+
+.authSubmit {
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+    width: 100%;
+}
+
+/*Phone*/
+@media (max-width: 768px) {
+    .header {
+      flex-wrap: wrap;
+      padding: 0.5rem 0.75rem;
+    }
+  
+    .headerMeta {
+      order: 3;
+      width: 100%;
+      font-size: 0.75rem;
+    }
+  
+    .body {
+      flex-direction: column;
+    }
+  
+    .sidebar {
+      width: 100%;
+      max-height: 40vh;
+      border-right: none;
+      border-bottom: 1px solid #2a2a2a;
+    }
+  
+    .userList {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+  
+    .userButton {
+      width: auto;
+    }
+  
+    .chatPanel {
+      min-height: 50vh;
+    }
+  
+    .messageItem {
+      max-width: 88%;
+    }
+  }

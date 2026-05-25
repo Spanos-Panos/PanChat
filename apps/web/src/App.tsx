@@ -204,101 +204,134 @@ function App() {
     setMessagesError(null)
   }
 
-  if(checkingSession){
-    return(
-      <main>
-        <h1 className={styles.panChatTitle}>PanChat</h1>
-        <p>Loading...</p>
-      </main>
+  if (checkingSession) {
+    return (
+      <div className={styles.authPage}>
+        <div className={styles.authCard}>
+          <h1 className={styles.panChatTitle}>PanChat</h1>
+          <p className={styles.authSubtitle}>Loading…</p>
+        </div>
+      </div>
     )
   }
 
-  if(user){
-    return(
-      <main>
-        <h1 className={styles.panChatTitle}>PanChat</h1>
-        <p>Logged in as {user.email}</p>
-        <button type="button" onClick={HandleLogout}>
-          Logout
-        </button>
-        
-        <h2>People</h2>
-        {usersError &&<p>{usersError}</p>}
-        <ul>
-          {users.map((u) => (
-            <li key={u.id}>
-              <button
-                type="button"
-                disabled={openingChat || u.id === user.id}
-                onClick={() => openChat(u.id)}
-              >
-                {u.displayName ?? u.username} (@{u.username})
-              </button>
-            </li>
-          ))}
-        </ul> 
-        
-        {activeThread && (
-          <section>
-            <h2>Chat with {activeThread.peer.displayName ?? activeThread.peer.username}</h2>
+  if (user) {
+    return (
+      <div className={styles.app}>
+        <header className={styles.header}>
+          <h1 className={styles.panChatTitle}>PanChat</h1>
+          <span className={styles.headerMeta}>
+            {user.displayName ?? user.username ?? user.email}
+          </span>
+          <button type="button" className={styles.counter} onClick={HandleLogout}>
+            Log out
+          </button>
+        </header>
 
-            {messagesError && <p>{messagesError}</p>}
-
-            <ul>
-              {messages.map((m) => (
-                <li key={m.id}>
-                  <strong>{m.senderId === user.id ? 'You' : activeThread.peer.username}:</strong>{' '}
-                  {m.body}
-                </li>
-              ))}
+        <div className={styles.body}>
+          <aside className={styles.sidebar}>
+            <h2 className={styles.sidebarTitle}>People</h2>
+            {usersError && <p className={styles.errorText}>{usersError}</p>}
+            <ul className={styles.userList}>
+              {users.map((u) => {
+                const isActive = activeThread?.peer.id === u.id
+                return (
+                  <li key={u.id}>
+                    <button
+                      type="button"
+                      className={`${styles.userButton} ${isActive ? styles.userButtonActive : ''}`}
+                      disabled={openingChat || u.id === user.id}
+                      onClick={() => openChat(u.id)}
+                    >
+                      {u.displayName ?? u.username}
+                    </button>
+                  </li>
+                )
+              })}
             </ul>
+          </aside>
 
-            <form onSubmit={handleSendMessage}>
-              <input
-                type="text"
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                placeholder="Type a message..."
-                required
-              />
-              <button type="submit" disabled={sending}>
-                {sending ? 'Sending…' : 'Send'}
-              </button>
-            </form>
+          <section className={styles.chatPanel}>
+            {!activeThread ? (
+              <div className={styles.chatEmpty}>Select someone to start chatting</div>
+            ) : (
+              <>
+                <h2 className={styles.chatHeader}>
+                  {activeThread.peer.displayName ?? activeThread.peer.username}
+                </h2>
+
+                {messagesError && <p className={styles.errorText}>{messagesError}</p>}
+
+                <ul className={styles.messages}>
+                  {messages.map((m) => {
+                    const isMine = m.senderId === user.id
+                    return (
+                      <li
+                        key={m.id}
+                        className={`${styles.messageItem} ${isMine ? styles.messageMine : ''}`}
+                      >
+                        {m.body}
+                      </li>
+                    )
+                  })}
+                </ul>
+
+                <form className={styles.composer} onSubmit={handleSendMessage}>
+                  <input
+                    type="text"
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    placeholder="Type a message..."
+                    required
+                  />
+                  <button type="submit" className={styles.counter} disabled={sending}>
+                    {sending ? 'Sending…' : 'Send'}
+                  </button>
+                </form>
+              </>
+            )}
           </section>
-        )}
-      </main>
+        </div>
+      </div>
     )
   }
 
-  return(
-    <main>
-      <h1 className={styles.panChatTitle}>PanChat</h1>
-      <form onSubmit={handleLogin}>
-        <label>
-          Email
-          <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          />
-        </label>
-        <label>
-          Password
-          <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          />
-        </label>
-        {error && <p>{error}</p>}
-        <button type="submit" className={styles.counter} disabled={loading}>
-          {loading ? 'Signing in...' : "Sign in"}
-        </button>
-      </form>
-    </main>
+  return (
+    <div className={styles.authPage}>
+      <div className={styles.authCard}>
+        <h1 className={styles.panChatTitle}>PanChat</h1>
+        <p className={styles.authSubtitle}>Sign in to continue</p>
+
+        <form className={styles.authForm} onSubmit={handleLogin}>
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Password
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </label>
+          {error && <p className={styles.errorText}>{error}</p>}
+          <button
+            type="submit"
+            className={`${styles.counter} ${styles.authSubmit}`}
+            disabled={loading}
+          >
+            {loading ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
+      </div>
+    </div>
   )
 }
 
