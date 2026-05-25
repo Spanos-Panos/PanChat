@@ -3,7 +3,7 @@
 > **Status:** Specification complete — **author-led build in progress** (Q1–Q13 decided)  
 > **Product name:** **PanChat** (author: Panos — chosen for fun/personal brand)  
 > **Author:** Panos, 21, self-taught developer  
-> **Last updated:** 2026-05-19 (Q13 teaching mode; Q9–Q12 stack + host model)  
+> **Last updated:** 2026-05-24 (Phase 1–2 API done; git teaching note)  
 > **Purpose of this document:** Single source of truth for any AI agent or human collaborator guiding design, implementation, and portfolio delivery of this project.
 
 ---
@@ -24,6 +24,8 @@
 3. Author tries it, reports result or pastes errors.
 4. Agent helps debug in chat; when a milestone is done, author asks agent to **update §21.2** here and **`panchat-learning-journal.md` §4–§5**.
 5. Every **5 steps** (journal §6): **quiz in its own message** — never mixed with new build steps. Order: **quiz then step**, or **one more step then quiz**; author triggers quiz when ready.
+6. **Git / GitHub (2026-05-24):** Author wants to **run** `git status`, `add`, `commit`, `push` himself to learn. Agent **lists commands and explains**; agent runs git only if author explicitly asks in that message.
+7. **UI polish (2026-05-24):** Build **functionality first** (auth → chat flow). Dedicated pass later for layout, CSS Modules polish, **responsive phone + desktop** (brief §10.8 still applies before portfolio demo).
 
 ---
 
@@ -839,7 +841,7 @@ Better than the reference app’s “mediocre” frontend — achieved through *
 | **Q14** | Dev tools (git, GitHub, Postman, …) | See §14.1 | **Git + private GitHub + DevTools + Prisma Studio + Docker + Postman** (installed). No DBeaver for MVP. | 2026-05-19 |
 | **Q14b** | HTTP API testing client | Postman vs Thunder Client vs curl only | **Postman** — already installed; light prior use | 2026-05-19 |
 
-**Agent instruction:** **Q1–Q15 complete.** Also read/update **`panchat-learning-journal.md`**. **Do not** create or edit app code. Guide the author through §17 / §21.2. Update this document when asked. Remind: API binds `0.0.0.0` for LAN/phone tests (later). Phase 9 Electron only after web stable.
+**Agent instruction:** **Q1–Q15 complete.** Also read/update **`panchat-learning-journal.md`**. **Do not** create or edit app code unless waived. **Do not run git** unless Panos asks — teach commands instead. **Current:** Phase 1–2 API on `main` (`132d466`). **Next:** React UI for chat, or tasks, or WebSocket. API binds `0.0.0.0` for LAN/phone tests (later). Electron (Phase 9) after web UI stable.
 
 ---
 
@@ -955,6 +957,47 @@ Check off in chat; ask agent to mark `[x]` here when you complete each step.
 
 **Phase 0 done when:** Postgres in Docker, API health + DB health work, Vite app runs — all **written by you**.
 
+### 21.2b Author progress — Phase 1 (auth API) — DONE 2026-05-24
+
+| Step | Task | Done |
+|------|------|------|
+| 1.1–1.2 | bcrypt, JWT, cookie plugins | [x] |
+| 1.3–1.7 | register, login, me, logout | [x] |
+| 1b | profile PATCH, `requireUser`, GET users | [x] |
+| — | Quiz 4 (auth + status codes) | [x] |
+| — | Git commit `132d466` (includes Phase 2) | [x] |
+
+### 21.2c Author progress — Phase 2 (1-1 chat API) — DONE 2026-05-24
+
+| Step | Task | Done |
+|------|------|------|
+| 2.1 | Prisma `Thread` + `Message` + migration | [x] |
+| 2.2 | `POST /api/v1/threads` | [x] |
+| 2.3 | `POST /api/v1/threads/:id/messages` | [x] |
+| 2.4 | `GET /api/v1/threads/:id/messages` | [x] |
+| 2.5 | `GET /api/v1/threads` (inbox + last message) | [x] |
+
+**Phase 2 API done when:** two users can open a thread and exchange messages via Postman — **yes** (panos ↔ mitsos tested).
+
+**Not done yet:** tasks on messages, WebSocket realtime, avatar upload, UI polish/responsive pass.
+
+**React chat UI (2026-05-24):** login, session `/me`, user list, open thread, read/send messages, logout — **working** in `apps/web` (functional layout only).
+
+### 21.2d Roadmap — author order (2026-05-24, aligns §17)
+
+| Wave | Focus | Git commit after? |
+|------|--------|-------------------|
+| **A** | Checkpoint: Phase 3 web (`apps/web`, `api.ts`) | **Yes — Panos runs** |
+| **B** | UI polish + responsive (phone + desktop) | **Yes — Panos runs** |
+| **C** | Register + profile onboarding **UI** | optional mid-wave |
+| **D** | Avatar API + UI | |
+| **E** | Tasks (API + recipient-only + My tasks UI) | |
+| **F** | WebSocket realtime + optional unread | |
+| **G** | Harden: README, LAN test, demo script, refactor routes | **Yes — “MVP portfolio”** |
+| **H** | Later: Electron, public repo, encryption phase 6 | v1.1+ |
+
+**Still required for §8 MVP:** register/sign-up UI, onboarding UI, avatar, tasks, realtime (WS). **Done:** email login API, profile API, 1-1 chat API+web, logout.
+
 ### 21.3 For the guiding AI agent
 
 1. **Never** create or edit application code unless author explicitly waives §0 in that message.
@@ -962,6 +1005,10 @@ Check off in chat; ask agent to mark `[x]` here when you complete each step.
 3. On request, update §19, §20, §21.2, and lesson notes in this file only.
 4. Never add §9 features to MVP without explicit author request.
 5. When author pastes errors, debug in chat — do not “fix by editing their repo.”
+6. **Git:** give Panos the commands; he runs them — do not commit/push unless he asks (2026-05-24).
+7. **Prisma relations:** always show **both sides** of a relation (e.g. `User` back-relations + new model).
+8. **After refactors:** remind Panos to re-run the **same Postman tests** before adding features.
+9. Follow **§21.2d roadmap order** unless author reprioritizes; **git commands for Panos only** unless he asks agent to run them.
 
 ---
 
