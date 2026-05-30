@@ -2,8 +2,8 @@
 
 > **Companion to:** [`thread-task-chat-brief.md`](./thread-task-chat-brief.md) (product spec, stack, MVP scope)  
 > **Purpose:** Track **how Panos learns**, what he knows / is learning / is weak on, session notes, and **quizzes** — so any AI agent or future you can continue teaching without starting from zero.  
-> **Last updated:** 2026-05-24  
-> **Phase:** **3 web chat MVP done** (login → chat → logout). **Roadmap:** §11 (git → styling → features → ship).
+> **Last updated:** 2026-05-30  
+> **Phase:** **MVP feature-complete** — auth, profile, avatars, tasks, **Socket.io live chat**. **Next:** Wave E (git checkpoint, demo video, portfolio README).
 
 ---
 
@@ -30,6 +30,69 @@
 | Tools installed | Docker Desktop, Postman (light prior use), Cursor, pnpm 11.x, Node 22 |
 | Language | Greek UI for app later; English for code, docs, and this journal |
 | Career target | Junior Full Stack **after** PanChat ships end-to-end |
+| **Testing preference (2026-05-30)** | Prefers **two-browser UI tests** (normal + incognito) over DevTools/Console; willing to learn F12 slowly, not every session |
+| **Energy / pace** | Can burn out on long multi-file steps — OK to ask agent to **implement** when explicitly waived; prefers **one small step** when learning |
+
+---
+
+## 1b. Honest assessment (agent notes — 2026-05-30)
+
+*Strict but fair. Update when reality changes.*
+
+### What is genuinely strong
+
+| Area | Why |
+|------|-----|
+| **React / UI thinking** | Forms, `useState`, `useEffect`, conditional screens (login vs profile vs chat) — you ship working UI faster than most beginners |
+| **Persistence** | You come back after breaks, run Docker/API/web, and finish milestones (register, profile, tasks E2E) |
+| **Engineering mindset** | You ask *why* (`.env`, CORS, 401 on `/me`) instead of only copy-pasting |
+| **Multi-user testing** | Incognito second user is now a habit — critical for chat + tasks |
+| **Corrections** | Typos and wrong `if` logic get fixed when pointed at logs/schema — you don’t argue with the compiler |
+
+### What is real but still “learning” (not weak — in progress)
+
+| Area | Truth |
+|------|--------|
+| **Node / Fastify API** | You **wrote** most of `index.ts` (~580 lines) with teaching — auth, threads, messages, tasks. You are not “bad at backend”; you are **early** backend. Portfolio claim: *built* API, not *expert* API |
+| **Prisma** | Schema + migrations work when walked through; relations still need “both sides on `User`” reminders; `prisma generate` + **stop API first** on Windows (EPERM) |
+| **HTTP** | Quiz 4 showed status-code gaps; real world improved (401 vs 404, PATCH vs POST). Keep a **cheat sheet** in notebook |
+| **CORS** | Learned the hard way: **PATCH** must be in `access-control-allow-methods` — classic cross-origin gotcha |
+| **Git** | You want to **run commands yourself** — good. Remember: `pnpm dev:api` / `docker compose` from **repo root**, not `apps/api` (scripts live on root `package.json`) |
+| **Refactors** | `requireUser` extract, missing `})` on routes, duplicate `setMessages` — pattern: **small diff → save → re-test same flow** |
+
+### What is still weak / unfamiliar (be honest in interviews)
+
+| Area | Level | Plan |
+|------|--------|------|
+| **Browser DevTools** | 🔴 early | Network tab for status codes when UI “looks broken”; not required every day if UI test passes |
+| **Socket.io** | ⬜ not started | Next big learn after avatar |
+| **Multipart / file upload** | ⬜ not started | Avatar (D.3) |
+| **Automated tests** | ⬜ | Optional in Wave E; manual E2E is OK for portfolio v1 |
+| **System design vocabulary** | 🟡 | You understand flows; naming (ACL, assignee, upsert) comes with repetition |
+
+### Progress snapshot (portfolio honesty)
+
+| Milestone | Status |
+|-----------|--------|
+| Phase 0 monorepo + Docker + Prisma | ✅ |
+| Phase 1–2 API auth + chat | ✅ `132d466` era |
+| Phase 3 web chat | ✅ `f6a335b` |
+| Wave B styling | ✅ `956d3f8` |
+| Wave D register + profile | ✅ (web) |
+| Wave D tasks API + UI | ✅ **2026-05-30** (may be **uncommitted** — run git checkpoint) |
+| Avatar | ⬜ **next (Panos chose before WebSocket)** |
+| WebSocket live chat | ⬜ |
+| README + demo video | ⬜ Wave E |
+
+**Rough completion:** ~**70%** functional MVP · ~**55%** portfolio-ready (needs README, demo, optional LAN phone test).
+
+### How the next agent should teach Panos
+
+1. **One step per message** unless he says “I’m burnt out — implement X.”  
+2. **UI test checklist** > long DevTools lectures (he asked for this explicitly).  
+3. After any refactor: **“re-open thread and send one message”** before new routes.  
+4. **Git:** give PowerShell commands; he runs them.  
+5. **Quiz 5** when he says ready — topics: tasks recipient-only, CORS methods, Prisma `Task` relations (separate message from build steps).
 
 ---
 
@@ -53,6 +116,10 @@
 | 2026-05-24 | Prisma step listed `Thread`/`Message` but **User back-relations** were easy to miss | Always say: **“update BOTH models”** + show full `User { … }` block |
 | 2026-05-24 | Panos refactored `requireUser` and **deleted** `PATCH /profile` body by accident | After refactors: **re-run same Postman checklist** before new features |
 | Ongoing | Typos break logic: `userHighid`, `if(user)` vs `if(!user)`, `' desc'` | Read server log `statusCode`; compare field names to schema **exactly** |
+| 2026-05-30 | CORS allowed POST but not PATCH → profile/tasks “Failed to fetch” | Add `methods` including **PATCH** on `@fastify/cors`; restart API |
+| 2026-05-30 | `prisma generate` EPERM on Windows | **Stop `pnpm dev:api`** first, then `pnpm exec prisma generate` |
+| 2026-05-30 | `pnpm dev:api` from `apps/api` fails | Root only: `pnpm dev:api` or in `apps/api`: `pnpm dev` |
+| 2026-05-30 | Long D.5 UI step → burnout | Split steps; agent may edit `App.tsx` when Panos **explicitly asks** |
 
 ---
 
@@ -62,24 +129,27 @@
 
 | Topic | Level | Evidence / notes |
 |-------|-------|------------------|
-| Git / GitHub | 🟡 | `af796ae` Phase 0 · `132d466` API · `f6a335b` Phase 3 web — Panos runs commit/push himself |
+| Git / GitHub | 🟡 | `af796ae` · `132d466` · `f6a335b` · `956d3f8` — Panos runs commit/push; **tasks wave may need new commit** |
 | pnpm / monorepo | 🟡 | Quiz 1: knows `dev:web` + `@panchat/web`; deepen workspace YAML meaning |
 | `.env` / secrets | 🟡 | Asked strong questions; fixed `Thumbs.db` typo after review |
 | React + Vite | 🟡 | Vite 8 + React 19 in `apps/web`; dev server verified |
 | CSS Modules | 🟡 | Clean shell; `App.module.css` + global `index.css` variables |
 | Docker / Compose | 🟡 | `panchat-db` Up on 5432; fixed `unless-stopped` typo from error message |
 | PostgreSQL | 🟡 | Docker DB `panchat` on port **5433** (Windows Postgres on 5432) |
-| Prisma | 🟡 | `User`, `Thread`, `Message`; relations two-sided; migrations + `prisma generate` when IDE types stale |
-| Fastify / Node HTTP | 🟡 | Full auth + chat API on :4000; status codes 200/201/400/401/403/404/409 |
-| JWT / cookies | 🟡 | Register/login set httpOnly cookie; `/me` verifies `sub`; Quiz 4 sharpen status codes |
-| Socket.io | ⬜ | After REST chat + UI |
-| Postman | 🟡 | Daily use Phase 1–2: POST vs GET, cookies, multi-user (panos + mitsos) |
+| Prisma | 🟡 | `User`, `Thread`, `Message`, **`Task`** + `TaskStatus`; migration `add_task`; generate with API stopped |
+| Fastify / Node HTTP | 🟡 | Auth + chat + **tasks** (~580 lines); CORS must list PATCH |
+| JWT / cookies | 🟡 | Register/login set httpOnly cookie; `/me` verifies `sub`; 401 on `/me` when logged out is **normal** |
+| Tasks (recipient-only) | 🟡 | Built API + UI; understands assignee vs sender; UI test > Console |
+| Socket.io | ⬜ | After avatar (author order 2026-05-30) |
+| Postman | 🟡 | Phase 1–2 heavy; Phase D often **browser-only** — both OK |
+| Browser DevTools | 🔴 | Learning Network/Console when needed; prefers incognito UI tests |
 | LAN / host vs client | 🟡 | Understands host + same laptop as client 1 (Q12) |
-| TypeScript (backend) | 🟡 | `index.ts` ~446 lines; `lib/auth.ts`; typos are main pain (casing) |
+| TypeScript (backend) | 🟡 | `index.ts` ~579 lines; `lib/auth.ts`; route `})` closures easy to miss |
+| React (features) | 🟡 | Register, profile gate, tasks composer, My tasks, Clear/Delete — **strongest recent work** |
 
 ### Weak spots to watch (update as we go)
 
-- Backend ownership end-to-end (biggest gap vs portfolio goal)
+- Backend **confidence** (skill is growing; impostor feeling is normal)
 - Docker commands and “what is a container” — teach when 0.6 lands
 - Prisma migrations vs `schema.prisma` — teach at 0.10–0.11
 - Rushing ahead without verifying in terminal — remind to paste output
@@ -141,9 +211,43 @@
 | 2.5 `GET /threads` | [x] | 2026-05-24 | Inbox + `lastMessage`; fixed `' desc'` |
 | 2.6 Git commit + push | [x] | 2026-05-24 | `132d466` — **agent ran; Panos wants to run git next time** |
 
+### Phase 3 — Web client (continued)
+
+| Step | Done | Date | One-line note |
+|------|------|------|----------------|
+| 3.1–3.6 | [x] | 2026-05-24 | `apiFetch`, login, `/me`, users, thread, messages, logout — `f6a335b` |
+
+### Wave B — Styling
+
+| Step | Done | Date | One-line note |
+|------|------|------|----------------|
+| B.1–B.4 | [x] | 2026-05-24 | Shell, bubbles, auth card, responsive — `956d3f8` |
+
+### Wave D — MVP features
+
+| Step | Done | Date | One-line note |
+|------|------|------|----------------|
+| D.1 Register (web) | [x] | 2026-05-30 | `authView` login/register |
+| D.2 Profile onboarding | [x] | 2026-05-30 | PATCH profile; CORS PATCH fix |
+| D.4 Tasks API | [x] | 2026-05-30 | Prisma `Task`; POST/GET/PATCH/inbox; recipient-only shaping |
+| D.5 Tasks UI | [x] | 2026-05-30 | Attach task, panel, Clear/Delete, My tasks sidebar; agent helped when burnt out |
+| D.3 Avatar | [ ] | — | **Next** (before WebSocket per Panos) |
+| D.6 WebSocket | [ ] | — | After avatar |
+| D.7 Unread (optional) | [ ] | — | Skip unless time |
+
 ---
 
 ## 5. Session log (newest first)
+
+### 2026-05-30 — Wave D: profile, tasks API + UI
+
+- **D.2 profile:** Register + onboarding UI; **CORS** missing PATCH → “Failed to fetch” on profile save; fixed in `index.ts` `methods`.
+- **D.4 Prisma:** `Task` model, migration `add_task`; `prisma generate` EPERM → stop API, regenerate.
+- **D.4 API:** POST message + optional task; GET messages shaped (`task` vs `hasTask`); inbox + PATCH clear/delete.
+- **D.5 web:** Attach task, sender hint, recipient panel + actions, My tasks list; duplicate `setMessages` + missing composer fixed; agent implemented bulk of D.5 when Panos burnt out (**explicit ask**).
+- **Teaching:** DevTools intro (401 on `/me`, Strict Mode double call); Panos prefers **UI testing** going forward.
+- **Decision:** **Avatar (D.3) before WebSocket (D.6)**.
+- **Git:** Panos should commit tasks + register/profile + CORS — may not be on `main` yet.
 
 ### 2026-05-24 — Phase 1–2 API (auth + chat)
 
@@ -218,6 +322,7 @@
 | **Quiz 2** | 0.5–0.9 | After 0.9 | ✅ done 2026-05-22 |
 | **Quiz 3** | 0.10–0.13 | After 0.13 | ✅ done 2026-05-22 (strict grade) |
 | **Quiz 4** | Phase 1 auth | After Phase 1 auth works | ✅ done 2026-05-24 |
+| **Quiz 5** | Wave D: tasks, CORS PATCH, Prisma Task | When Panos says ready | ⬜ pending |
 
 ---
 
@@ -312,48 +417,48 @@
 | A.2 | `git add` + `git commit` — web client + chat UI |
 | A.3 | `git push origin main` |
 
-### Wave B — Styling pass (in progress)
+### Wave B — Styling pass ✅ done 2026-05-24 (`956d3f8`)
 
 | Step | Done |
 |------|------|
 | B.1 App shell layout | [x] |
 | B.2 Message bubbles L/R | [x] |
 | B.2b Login card | [x] |
-| B.3 Responsive | [ ] ← next |
-| B.4 Re-test 2 users | [ ] |
+| B.3 Responsive | [x] |
+| B.4 Re-test + git (Panos) | [x] `956d3f8` pushed |
+
+### Wave C — Git checkpoint (tasks + profile) ← **do soon**
 
 | Step | What |
 |------|------|
-| B.1 | Layout: header, people list, chat panel |
-| B.2 | CSS Modules polish |
-| B.3 | Responsive phone + desktop |
-| B.4 | Re-test panos + incognito mitsos |
-
-### Wave C — Git checkpoint (styling)
-
-Commit + push before new API work.
+| C.1 | `git status` / `git diff` — review API + web |
+| C.2 | Commit: register, profile, tasks API/UI, CORS PATCH |
+| C.3 | `git push origin main` |
 
 ### Wave D — Missing MVP (brief §8)
 
-| Order | Feature |
-|-------|---------|
-| D.1 | Register page (web) |
-| D.2 | Profile onboarding UI |
-| D.3 | Avatar upload API + UI |
-| D.4 | Tasks API (recipient-only) |
-| D.5 | Tasks UI + My tasks |
-| D.6 | WebSocket realtime |
-| D.7 | Unread badges (optional) |
+| Order | Feature | Status |
+|-------|---------|--------|
+| D.1 | Register page (web) | ✅ |
+| D.2 | Profile onboarding UI | ✅ |
+| D.4 | Tasks API (recipient-only) | ✅ |
+| D.5 | Tasks UI + My tasks | ✅ |
+| D.3 | Avatar upload API + UI | ✅ |
+| D.6 | WebSocket + live avatar (`user:updated`) | ✅ |
+| D.7 | Unread badges (optional) | skip |
 
-### Wave E — Finalize (product / portfolio)
+### Wave E — Portfolio finalize ← **next**
 
-README, LAN phone test, demo checklist (2 users + **task** clear/delete), route refactor, light ESLint.
+| Step | What |
+|------|------|
+| E.1 | Git commit + push (full MVP) — **Panos runs** |
+| E.2 | Record demo video (README checklist) |
+| E.3 | Optional: LAN phone test |
+| E.4 | Optional: public GitHub repo |
 
-### Wave F — Git checkpoint (“portfolio MVP”)
+### Wave F — Later (v1.1+)
 
-### Wave G — Later (v1.1+)
-
-Electron, public GitHub, TLS/E2E encryption per §17.
+Electron `.exe`, TLS/E2E encryption per §17.
 
 ---
 
@@ -368,7 +473,7 @@ Electron, public GitHub, TLS/E2E encryption per §17.
 
 ## 9. For a new AI agent (handoff blurb)
 
-> Panos builds **PanChat** himself (§0). **Do not scaffold code** unless he waives it. **Do not run git** unless he asks — give commands (§11 Wave A). **Current:** Phase **3 web chat MVP done**; last push `132d466` (API only). **Roadmap:** §11 / brief §21.2d — git → styling → git → register/avatar/tasks/WS → harden. **Weak spots:** refactors, typos in URLs/Prisma, status codes. **Next step:** Wave A git (Panos runs).
+> Panos builds **PanChat** himself (§0). **Current (2026-05-30):** MVP **feature-complete** — tasks, avatars, Socket.io live chat. **Next:** Wave E git + demo video. **Panos runs git.** **Teach:** one step, UI tests. **Watch:** avatar URL cache bust, `App.tsx` vs `index.ts`, CORS PATCH.
 
 ---
 
@@ -441,7 +546,7 @@ git push origin main
 
 **Never commit:** `.env` (secrets). **OK to commit:** `.env.example`, migrations, source code.
 
-**Latest commits:** `af796ae` Phase 0 · `132d466` Phase 1–2 auth + chat API.
+**Latest commits:** `af796ae` Phase 0 · `132d466` API auth+chat · `f6a335b` web chat · `956d3f8` styling · **(pending)** tasks/profile/register.
 
 ### D. Decisions (locked)
 
@@ -449,9 +554,10 @@ git push origin main
 - You write all code; AI edits **only** the two `.md` files
 - Host PC can run Docker **and** be client 1 (`localhost`)
 - Postman for API tests (Phase 1+)
-- Quiz 1–4 ✅ | Quiz 5 after next ~5 steps (UI or tasks) — **separate message from build steps** (Q16)
+- Quiz 1–4 ✅ | **Quiz 5** = tasks + CORS PATCH (when Panos ready) — **separate message** (Q16)
+- **Avatar before WebSocket** (2026-05-30)
 
-### E. Phase 1–2 API routes (Postman)
+### E. API routes (Postman or UI)
 
 | Method | Path |
 |--------|------|
@@ -464,7 +570,9 @@ git push origin main
 | POST | `/api/v1/threads` body `{ peerUserId }` |
 | GET | `/api/v1/threads` |
 | GET | `/api/v1/threads/:id/messages` |
-| POST | `/api/v1/threads/:id/messages` body `{ body }` |
+| POST | `/api/v1/threads/:id/messages` body `{ body, task?: { body } }` |
+| GET | `/api/v1/tasks/inbox` optional `?status=open` |
+| PATCH | `/api/v1/tasks/:id` body `{ status: 'cleared' \| 'deleted' }` assignee only |
 
 ### F. Fixes you already solved (good to remember)
 
@@ -480,6 +588,9 @@ git push origin main
 | `createdAt: ' desc'` | No space — `'desc'` or `'asc'` |
 | P1001 migrate | `docker compose up -d` |
 | Prisma `Property 'thread' does not exist` | `prisma generate` + restart TS server |
+| Profile/tasks “Failed to fetch” | CORS `methods` include **PATCH** |
+| `pnpm dev:api` not found in `apps/api` | Use repo root `pnpm dev:api` or `apps/api` → `pnpm dev` |
+| Missing `})` after route handler | Close `app.post` before next `app.get` |
 
 ### G. `index.ts` API — 30-second map
 
@@ -499,4 +610,4 @@ git push origin main
 
 ---
 
-*Update §3–§7 when Panos completes steps or finishes a quiz.*
+*Update §1b, §3–§7, §11 when Panos completes steps, finishes a quiz, or changes priorities.*

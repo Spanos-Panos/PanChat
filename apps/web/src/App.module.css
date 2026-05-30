@@ -1,258 +1,458 @@
 .app {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.75rem 1rem;
-    border-bottom:1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 .headerMeta {
-    font-size:0.875rem;
-    color: #3a3a3a;
+  font-size: 0.875rem;
+  color: #3a3a3a;
 }
 
-.body{
-    flex: 1;
-    display: flex;
-    min-height: 0;
+.body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
-.sidebar{
-    width: 260px;
-    flex-shrink: 0;
-    border-right: 1px solid #2a2a2a;
-    padding: 0.75rem;
-    overflow-y: auto;
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid #2a2a2a;
+  padding: 0.75rem;
+  overflow-y: auto;
 }
 
 .sidebarTitle {
-    margin: 0 0 0 0.75rem;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08rem;
-    color: #737373;
+  margin: 0 0 0 0.75rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08rem;
+  color: #737373;
 }
 
 .userList {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-.useBottom {
-    width: 100%;
-    text-align: left;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
+.userButton {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
 }
 
-.useBottom:hover:not(:disabled){
-    background: #1a1a1a;
+.userButton:hover:not(:disabled) {
+  background: #1a1a1a;
 }
 
-.useBottomActive {
-    background: #1a293b;
-    border-color: #334155;
+.userButtonActive {
+  background: #1a293b;
+  border-color: #334155;
 }
 
-.useButton:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
+.userButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .chatPanel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .chatEmpty {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #737373;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #737373;
 }
 
 .chatHeader {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid #2a2a2a;
-    margin: 0;
-    font-size: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #2a2a2a;
+  margin: 0;
+  font-size: 1rem;
 }
 
 .messages {
-    flex: 1;
-    overflow-y: auto;
-    list-style: none;
-    margin: 0;
-    padding: 1rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end; 
-    gap: 0.5rem;
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .messageItem {
-    max-width: 75%;
-    padding: 0.5rem 0.75rem;
-    border-radius: 12px;
-    background: #262626;
-    align-self: flex-start;
+  max-width: 75%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  background: #262626;
+  align-self: flex-start;
 }
 
 .messageMine {
-    align-self: flex-end;
-    background: #1e3a5f;
+  align-self: flex-end;
+  background: #1e3a5f;
 }
 
 .composer {
-    display: flex;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border-top: 1px solid #2a2a2a;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #2a2a2a;
 }
 
-.composer input {
-    flex: 1;
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
-    border: 1px solid #333;
-    background: #141414;
-    color: inherit;
+.composerRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.composerRow input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #141414;
+  color: inherit;
+}
+
+.composer .counter {
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .errorText {
-    color: #f87171;
-    font-size: 0.875rem;
-    margin: 0.5rem 0 0;
+  color: #f87171;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0;
 }
 
 .panChatTitle {
-    color:#2563eb;
-    letter-spacing:0.02em;
+  color: #2563eb;
+  letter-spacing: 0.02em;
 }
 
 .counter {
-    font-size: 16px;
-    padding: 5px 10px;
-    border-radius:5px;
-    color: var(--accent);
-    background: var(--accent-bg);
-    border: 2px solid transparent;
-    transition: border-color 0.3s;
-    margin-bottom: 24px;
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+  margin-bottom: 24px;
 }
 
 .counter:hover {
-    border-color: var(--accent-border);
+  border-color: var(--accent-border);
 }
 
 .counter:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .authPage {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
 }
 
 .authCard {
-    width: 100%;
-    max-width: 400px;
-    padding: 1.5rem;
-    border-radius: 12px;
-    border: 1px solid #2a2a2a;
-    background: #141414;
+  width: 100%;
+  max-width: 400px;
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid #2a2a2a;
+  background: #141414;
 }
 
 .authCard h1 {
-    margin: 0 0 0.25rem;
+  margin: 0 0 0.25rem;
 }
 
-.authSubtitle{
-    margin: 0 0 1.25rem;
-    font-size: 0.875rem;
-    color: #737373;
+.authSubtitle {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  color: #737373;
 }
 
 .authForm {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .authForm input {
-    padding: 0.5rem 0.75rem;
-    border-radius: 6px;
-    border: 1px solid #333;
-    background: #0f0f0f;
-    color: inherit
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #0f0f0f;
+  color: inherit;
 }
 
 .authSubmit {
-    margin-top: 0.5rem;
-    margin-bottom: 0;
-    width: 100%;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  width: 100%;
 }
 
 /*Phone*/
 @media (max-width: 768px) {
-    .header {
-      flex-wrap: wrap;
-      padding: 0.5rem 0.75rem;
-    }
-  
-    .headerMeta {
-      order: 3;
-      width: 100%;
-      font-size: 0.75rem;
-    }
-  
-    .body {
-      flex-direction: column;
-    }
-  
-    .sidebar {
-      width: 100%;
-      max-height: 40vh;
-      border-right: none;
-      border-bottom: 1px solid #2a2a2a;
-    }
-  
-    .userList {
-      flex-direction: row;
-      flex-wrap: wrap;
-    }
-  
-    .userButton {
-      width: auto;
-    }
-  
-    .chatPanel {
-      min-height: 50vh;
-    }
-  
-    .messageItem {
-      max-width: 88%;
-    }
+  .header {
+    flex-wrap: wrap;
+    padding: 0.5rem 0.75rem;
   }
+
+  .headerMeta {
+    order: 3;
+    width: 100%;
+    font-size: 0.75rem;
+  }
+
+  .body {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid #2a2a2a;
+  }
+
+  .userList {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .userButton {
+    width: auto;
+  }
+
+  .chatPanel {
+    min-height: 50vh;
+  }
+
+  .messageItem {
+    max-width: 88%;
+  }
+}
+
+.authSwitch {
+  margin: 1rem 0 0;
+  font-size: 0.875rem;
+  color: #737373;
+  text-align: center;
+}
+
+.authLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #60a5fa;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+}
+
+.attachTaskRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #a3a3a3;
+}
+
+.taskInput {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #0f0f0f;
+  color: inherit;
+}
+
+.taskPanel {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #1a2a1a;
+  border: 1px solid #2d4a2d;
+  font-size: 0.875rem;
+}
+
+.taskSentHint {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: #737373;
+  font-style: italic;
+}
+
+.taskStatus {
+  font-size: 0.75rem;
+  color: #86efac;
+  text-transform: capitalize;
+}
+
+.taskActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.taskActionBtn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: #262626;
+  color: inherit;
+  cursor: pointer;
+}
+
+.taskInboxList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.taskInboxButton {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+  background: #141414;
+  color: inherit;
+  cursor: pointer;
+}
+
+.taskInboxButton:hover {
+  background: #1a1a1a;
+}
+
+.taskInboxBody {
+  display: block;
+  font-size: 0.875rem;
+}
+
+.taskInboxMeta {
+  display: block;
+  font-size: 0.7rem;
+  color: #737373;
+  margin-top: 0.25rem;
+}
+
+.taskInboxEmpty {
+  font-size: 0.875rem;
+  color: #737373;
+  padding: 0.5rem 0.75rem;
+  list-style: none;
+}
+
+.headerProfile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.headerProfileText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.avatarUploadLabel {
+  font-size: 0.75rem;
+  color: #60a5fa;
+  cursor: pointer;
+}
+
+.avatar,
+.avatarSmall {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatarSmall {
+  width: 28px;
+  height: 28px;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.avatarPlaceholder,
+.avatarSmallPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #334155;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.avatarSmallPlaceholder {
+  width: 28px;
+  height: 28px;
+  font-size: 0.75rem;
+  margin-right: 0.5rem;
+}
+
+.chatHeaderRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.chatHeaderRow .chatHeader {
+  padding: 0;
+  border: none;
+  margin: 0;
+}
+
+.userButton {
+  display: flex;
+  align-items: center;
+}

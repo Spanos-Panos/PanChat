@@ -19,36 +19,63 @@ model User {
   createdAt              DateTime      @default(now())                  @map("created_at")
   deletedAt              DateTime?     @map("deleted_at")
 
-  threadsAsLow Thread[] @relation("ThreadUserLow")
-  threadsAsHigh Thread[] @relation("ThreadUserHigh")
-  messagesSent Message[]
+  threadsAsLow           Thread[]      @relation("ThreadUserLow")
+  threadsAsHigh          Thread[]      @relation("ThreadUserHigh")
+  messagesSent           Message[]
+  tasksAssigned          Task[]        @relation("TaskAssignee")
+  tasksCreated           Task[]        @relation("TaskCreator")
 
   @@map("users")
 }
 
 model Thread {
-  id String @id @default(uuid())
-  userLowId String @map("user_low_id")
-  userHighId String @map("user_high_id")
-  createdAt DateTime @default(now()) @map("created_at")
+  id                    String         @id @default(uuid())
+  userLowId             String         @map("user_low_id")
+  userHighId            String         @map("user_high_id")
+  createdAt             DateTime       @default(now())     @map("created_at")
 
-  userLow User @relation("ThreadUserLow", fields: [userLowId], references: [id])
-  userHigh User @relation("ThreadUserHigh", fields: [userHighId] , references: [id])
-  messages Message[]
+  userLow               User           @relation("ThreadUserLow", fields: [userLowId], references: [id])
+  userHigh              User           @relation("ThreadUserHigh", fields: [userHighId] , references: [id])
+  messages              Message[]
 
   @@unique([userLowId , userHighId])
   @@map("threads")
 }
 
 model Message {
-  id String @id @default(uuid())
-  threadId String @map("thread_id")
-  senderId String @map("sender_id")
-  body String
-  createdAt DateTime @default(now()) @map("created_at")
+  id                    String         @id @default(uuid())
+  threadId              String         @map("thread_id")
+  senderId              String         @map("sender_id")
+  body                  String
+  createdAt             DateTime       @default(now())     @map("created_at")
+  task                  Task?
 
-  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  sender User @relation(fields: [senderId], references: [id])
+  thread                Thread         @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender                User           @relation(fields: [senderId], references: [id])
 
   @@map("messages")
+}
+
+enum TaskStatus {
+  open
+  cleared
+  deleted
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  messageId   String     @unique @map("message_id")
+  assigneeId  String     @map("assignee_id")
+  createdById String     @map("created_by_id")
+  body        String
+  status      TaskStatus @default(open)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  message     Message    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  assignee    User       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy   User       @relation("TaskCreator", fields: [createdById], references: [id])
+
+  @@index([assigneeId, status])
+  @@map("tasks")
 }

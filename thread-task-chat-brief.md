@@ -841,7 +841,7 @@ Better than the reference app’s “mediocre” frontend — achieved through *
 | **Q14** | Dev tools (git, GitHub, Postman, …) | See §14.1 | **Git + private GitHub + DevTools + Prisma Studio + Docker + Postman** (installed). No DBeaver for MVP. | 2026-05-19 |
 | **Q14b** | HTTP API testing client | Postman vs Thunder Client vs curl only | **Postman** — already installed; light prior use | 2026-05-19 |
 
-**Agent instruction:** **Q1–Q15 complete.** Also read/update **`panchat-learning-journal.md`**. **Do not** create or edit app code unless waived. **Do not run git** unless Panos asks — teach commands instead. **Current:** Phase 1–2 API on `main` (`132d466`). **Next:** React UI for chat, or tasks, or WebSocket. API binds `0.0.0.0` for LAN/phone tests (later). Electron (Phase 9) after web UI stable.
+**Agent instruction:** **Q1–Q15 complete.** Read/update **`panchat-learning-journal.md`** (§1b skills). **Do not** edit app code unless Panos waives §0. **Do not run git** unless asked. **Current (2026-05-30):** Tasks + register + profile **working**; commit may lag `main`. **Next:** **D.3 avatar** → **D.6 WebSocket** → Wave E README/demo. API `0.0.0.0` for LAN later. CORS must allow **PATCH**.
 
 ---
 
@@ -979,24 +979,37 @@ Check off in chat; ask agent to mark `[x]` here when you complete each step.
 
 **Phase 2 API done when:** two users can open a thread and exchange messages via Postman — **yes** (panos ↔ mitsos tested).
 
-**Not done yet:** tasks on messages, WebSocket realtime, avatar upload, UI polish/responsive pass.
+**Done (2026-05-30):** recipient-only **tasks** (Prisma `Task`, POST/GET/PATCH/inbox API, web: attach task, My tasks, Clear/Delete). **UI polish:** Wave B (`956d3f8`).
 
-**React chat UI (2026-05-24):** login, session `/me`, user list, open thread, read/send messages, logout — **working** in `apps/web` (functional layout only).
+**React web (2026-05-30):** login + **register**, **profile onboarding**, session `/me`, user list, 1-1 chat, **tasks**, logout.
 
-### 21.2d Roadmap — author order (2026-05-24, aligns §17)
+**Not done yet:** avatar upload, WebSocket realtime, portfolio README/demo/LAN test.
 
-| Wave | Focus | Git commit after? |
-|------|--------|-------------------|
-| **A** | Checkpoint: Phase 3 web (`apps/web`, `api.ts`) | ✅ `f6a335b` |
-| **B** | UI polish + responsive (phone + desktop) | **Yes — Panos runs** |
-| **C** | Register + profile onboarding **UI** | optional mid-wave |
-| **D** | Avatar API + UI | |
-| **E** | Tasks (API + recipient-only + My tasks UI) | |
-| **F** | WebSocket realtime + optional unread | |
-| **G** | Harden: README, LAN test, demo script, refactor routes | **Yes — “MVP portfolio”** |
-| **H** | Later: Electron, public repo, encryption phase 6 | v1.1+ |
+### 21.2d Roadmap — author order (updated 2026-05-30, aligns §17)
 
-**Still required for §8 MVP:** register/sign-up UI, onboarding UI, avatar, tasks, realtime (WS). **Done:** email login API, profile API, 1-1 chat API+web, logout.
+| Wave | Focus | Status |
+|------|--------|--------|
+| **A** | Checkpoint: Phase 3 web | ✅ `f6a335b` |
+| **B** | UI polish + responsive | ✅ `956d3f8` |
+| **D.1–D.2** | Register + profile onboarding UI | ✅ 2026-05-30 |
+| **D.4–D.5** | Tasks API + recipient-only + My tasks UI | ✅ 2026-05-30 |
+| **C** | Git checkpoint (tasks + profile + register) | **Panos — pending commit** |
+| **D.3** | Avatar API + UI | **← next (author chose before WS)** |
+| **D.6** | WebSocket realtime + optional unread | after D.3 |
+| **E** | Harden: README, LAN test, demo (2 users + task clear) | portfolio milestone |
+| **F** | Later: Electron, public repo, encryption | v1.1+ |
+
+**Still required for §8 MVP:** avatar, realtime (WS). **Done:** auth, profile, 1-1 chat, tasks, register UI.
+
+### 21.2e Author skills snapshot (for agents — honest, 2026-05-30)
+
+| Strong | Learning | Weak / prefer skip |
+|--------|----------|-------------------|
+| React UI, forms, two-user browser tests | Fastify routes, Prisma, JWT/cookies | DevTools deep dives (teach lightly) |
+| Asks good “why” questions | CORS, status codes, migrations | Long multi-file steps without breaks |
+| Finishes milestones when paced | Git from repo root | Automated tests (not started) |
+
+See **`panchat-learning-journal.md` §1b** for full narrative. **Teaching:** one step; UI test checklist; Panos runs git unless he asks agent.
 
 ### 21.3 For the guiding AI agent
 

@@ -1,8 +1,10 @@
 # PanChat
 
-Lightweight LAN messaging with optional inline tasks and simple profiles. A full-stack learning and portfolio project by Panos.
+Lightweight LAN messaging with **recipient-only inline tasks** and simple profiles. A full-stack learning and portfolio project by Panos.
 
-**Stack:** React (Vite) · Fastify · PostgreSQL · Prisma · Docker · pnpm monorepo
+**Stack:** React 19 (Vite) · Fastify · PostgreSQL · Prisma · Docker · pnpm monorepo
+
+**Current features:** email register/login · profile onboarding · avatar upload · global user list · 1-1 chat · **live messages (Socket.io)** · attach task on send · My tasks inbox · clear/delete task (recipient-only) · live avatar updates across tabs
 
 ---
 
@@ -123,10 +125,36 @@ If `prisma migrate` fails with **P1000 authentication failed** on port 5432, you
 
 ---
 
-## Phase 0 status
+## Demo checklist (portfolio video ~2–3 min)
 
-- [x] Monorepo, web, API, Docker, Prisma `users` table, health routes
-- [ ] Phase 1: email auth, profiles, chat (see `thread-task-chat-brief.md`)
+Use **two browser windows** (normal + incognito) with API + web running.
+
+1. Register or log in as **User A**; complete profile (username).
+2. Log in as **User B** in incognito.
+3. **User A** opens chat with **User B** → send a message → **B sees it instantly** (no refresh).
+4. **User A** sends a message **with a task** attached.
+5. **User B** sees the task panel → **Clear** or **Delete**; check **My tasks** in the sidebar.
+6. **User B** uploads an **avatar** → **User A** sees it update in People list without refresh.
+7. Optional: show register flow, logout, log back in (session cookie).
+
+Record with OBS or Windows Game Bar; mention stack in voiceover or title slide.
+
+---
+
+## Project status (2026-05-30)
+
+| Area | Status |
+|------|--------|
+| Monorepo, Docker Postgres, health routes | Done |
+| Auth + register + profile onboarding | Done |
+| 1-1 chat + Socket.io live messages | Done |
+| Recipient-only tasks + My tasks UI | Done |
+| Avatar upload + live `user:updated` | Done |
+| Demo video + public README polish | **Next (Wave E)** |
+| LAN phone test | Optional before portfolio |
+| Electron `.exe` | Later (v1.1) |
+
+Details: `thread-task-chat-brief.md` §21.2d · learning log: `panchat-learning-journal.md`
 
 ---
 
