@@ -15,6 +15,7 @@ import {join , extname} from "node:path";
 import { Server } from "socket.io";
 
 let io: Server | undefined;
+const onlineCounts = new Map<string, number>();
 
 function orderUserPair(idA: string, idB: string): [string, string] {
   return idA < idB ? [idA, idB] : [idB, idA];
@@ -25,6 +26,7 @@ type MessageWithTask = {
   threadId: string;
   senderId: string;
   body: string;
+  deletedForEveryone: boolean;
   createdAt: Date;
   task: {
     id: string;
@@ -42,9 +44,13 @@ function shapeMessageForViewer(message: MessageWithTask, viewerId: string) {
     id: message.id,
     threadId: message.threadId,
     senderId: message.senderId,
-    body: message.body,
+    body: message.deletedForEveryone ? "" : message.body,
+    deletedForEveryone: message.deletedForEveryone,
     createdAt: message.createdAt,
   };
+
+  // A deleted-for-everyone message shows a tombstone, never its task/body.
+  if (message.deletedForEveryone) return base;
 
   if (!message.task) return base;
 
@@ -85,7 +91,7 @@ await app.register(cors, {
 });
 
 await app.register(multipart, {
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
 
 const uploadsRoot = join(__dirname, "../uploads");
@@ -531,7 +537,11 @@ app.get("/api/v1/threads/:id/messages", async (request, reply) => {
   }
 
   const messages = await prisma.message.findMany({
-    where: { threadId },
+    where: {
+      threadId,
+      // Exclude messages this viewer has "deleted for me".
+      hides: { none: { userId: currentUser.id } },
+    },
     orderBy: { createdAt: "asc" },
     include: { task: true },
   });
@@ -541,9 +551,14 @@ app.get("/api/v1/threads/:id/messages", async (request, reply) => {
       id: m.id,
       threadId: m.threadId,
       senderId: m.senderId,
-      body: m.body,
+      body: m.deletedForEveryone ? "" : m.body,
+      deletedForEveryone: m.deletedForEveryone,
       createdAt: m.createdAt,
     };
+
+    if (m.deletedForEveryone) {
+      return base;
+    }
 
     if (!m.task) {
       return base;
@@ -566,6 +581,75 @@ app.get("/api/v1/threads/:id/messages", async (request, reply) => {
   });
 
   return { messages: shaped };
+});
+
+app.delete("/api/v1/messages/:id", async (request, reply) => {
+  const currentUser = await requireUser(app, request, reply);
+  if (!currentUser) return;
+
+  const { id } = request.params as { id: string };
+  const scope = (request.query as { scope?: string }).scope ?? "me";
+
+  if (scope !== "me" && scope !== "everyone") {
+    return reply.code(400).send({ error: "scope must be 'me' or 'everyone'" });
+  }
+
+  const message = await prisma.message.findUnique({
+    where: { id },
+    include: { thread: true, task: true },
+  });
+
+  if (!message) {
+    return reply.code(404).send({ error: "Message not found" });
+  }
+
+  const { thread } = message;
+  const isParticipant =
+    thread.userLowId === currentUser.id || thread.userHighId === currentUser.id;
+
+  if (!isParticipant) {
+    return reply.code(403).send({ error: "Not allowed in this thread" });
+  }
+
+  if (scope === "everyone") {
+    if (message.senderId !== currentUser.id) {
+      return reply
+        .code(403)
+        .send({ error: "You can only delete your own messages for everyone" });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (message.task) {
+        await tx.task.delete({ where: { id: message.task.id } });
+      }
+      await tx.message.update({
+        where: { id },
+        data: { deletedForEveryone: true, body: "" },
+      });
+    });
+
+    if (io) {
+      // Notify both participants (every tab/device) so the deletion shows
+      // live for the sender's other sessions and the recipient alike.
+      io.to(`user:${thread.userLowId}`)
+        .to(`user:${thread.userHighId}`)
+        .emit("message:deleted", {
+          threadId: thread.id,
+          messageId: id,
+        });
+    }
+
+    return { ok: true, scope: "everyone" };
+  }
+
+  // "delete for me": hide the message from this viewer only.
+  await prisma.messageHide.upsert({
+    where: { messageId_userId: { messageId: id, userId: currentUser.id } },
+    create: { messageId: id, userId: currentUser.id },
+    update: {},
+  });
+
+  return { ok: true, scope: "me" };
 });
 
 app.get("/api/v1/tasks/inbox", async (request, reply) => {
@@ -758,6 +842,72 @@ const start = async () => {
     io.on("connection", (socket) => {
       const userId = socket.data.userId as string;
       socket.join(`user:${userId}`);
+
+      const prev = onlineCounts.get(userId) ?? 0;
+      onlineCounts.set(userId, prev + 1);
+      if (prev === 0) {
+        socket.broadcast.emit("user:online", { userId });
+      }
+      socket.emit("presence:sync", {
+        onlineUserIds: [...onlineCounts.keys()],
+      });
+
+      socket.on("typing:start", async (payload: { threadId?: string }) => {
+        const threadId = payload?.threadId;
+        if (!threadId) return;
+
+        const thread = await prisma.thread.findUnique({
+          where: { id: threadId },
+        });
+        if (!thread) return;
+
+        const isParticipant =
+          thread.userLowId === userId || thread.userHighId === userId;
+        if (!isParticipant) return;
+
+        const peerId =
+          thread.userLowId === userId ? thread.userHighId : thread.userLowId;
+
+        io!.to(`user:${peerId}`).emit("typing:update", {
+          threadId,
+          userId,
+          isTyping: true,
+        });
+      });
+
+      socket.on("typing:stop", async (payload: { threadId?: string }) => {
+        const threadId = payload?.threadId;
+        if (!threadId) return;
+
+        const thread = await prisma.thread.findUnique({
+          where: { id: threadId },
+        });
+        if (!thread) return;
+
+        const isParticipant =
+          thread.userLowId === userId || thread.userHighId === userId;
+        if (!isParticipant) return;
+
+        const peerId =
+          thread.userLowId === userId ? thread.userHighId : thread.userLowId;
+
+        io!.to(`user:${peerId}`).emit("typing:update", {
+          threadId,
+          userId,
+          isTyping: false,
+        });
+      });
+
+      socket.on("disconnect", () => {
+        const current = onlineCounts.get(userId) ?? 1;
+        if (current <= 1) {
+          onlineCounts.delete(userId);
+          io!.emit("user:offline", { userId });
+        } else {
+          onlineCounts.set(userId, current - 1);
+        }
+      });
+
       console.log(`Socket connected: user ${userId}`);
     });
 

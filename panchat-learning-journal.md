@@ -427,6 +427,8 @@
 | B.3 Responsive | [x] |
 | B.4 Re-test + git (Panos) | [x] `956d3f8` pushed |
 
+**Polish pass B+C (2026-05-24, agent):** hide self from People list, auto-scroll chat, online presence dots, typing indicator (Socket.io `presence:*`, `typing:*`).
+
 ### Wave C — Git checkpoint (tasks + profile) ← **do soon**
 
 | Step | What |

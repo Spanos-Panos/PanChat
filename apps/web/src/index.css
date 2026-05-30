@@ -1,24 +1,92 @@
 :root {
-    --accent: #646cff;
-    --accent-bg: #1a1a1a;
-    --accent-border:#646cff;
-    --text:#fff;
+  --brand: #4f8cff;
+  --brand-hover: #7aabff;
+  --brand-strong: #2563eb;
+  --brand-muted: rgba(79, 140, 255, 0.14);
+  --brand-glow: rgba(79, 140, 255, 0.28);
+
+  --accent: var(--brand);
+  --accent-bg: var(--brand-muted);
+  --accent-border: var(--brand);
+
+  --bg-root: #09090b;
+  --bg-elevated: #0f0f12;
+  --bg-panel: #0b0b0e;
+  --bg-card: #131316;
+  --bg-input: #0c0c0f;
+  --bg-hover: #1a1a1f;
+
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  --text: #f4f4f5;
+  --text-muted: #a1a1aa;
+  --text-faint: #71717a;
+
+  --success: #34d399;
+  --success-muted: rgba(52, 211, 153, 0.14);
+  --danger: #fb7185;
+  --danger-muted: rgba(251, 113, 133, 0.12);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 12px 40px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 48px var(--brand-glow);
+
+  --font-display: "Syne", system-ui, sans-serif;
+  --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 *,
 *::before,
 *::after {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
-body{
-    margin: 0;
-    min-height: 100vh;
-    font-family:system-ui, sans-serif;
-    background: #0f0f0f;
-    color: var(--text)
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--bg-root);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
-    min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
+}
+
+::selection {
+  background: var(--brand-muted);
+  color: var(--text);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+input::placeholder {
+  color: var(--text-faint);
 }

@@ -24,6 +24,7 @@ model User {
   messagesSent           Message[]
   tasksAssigned          Task[]        @relation("TaskAssignee")
   tasksCreated           Task[]        @relation("TaskCreator")
+  messageHides           MessageHide[]
 
   @@map("users")
 }
@@ -47,13 +48,29 @@ model Message {
   threadId              String         @map("thread_id")
   senderId              String         @map("sender_id")
   body                  String
+  deletedForEveryone    Boolean        @default(false)     @map("deleted_for_everyone")
   createdAt             DateTime       @default(now())     @map("created_at")
   task                  Task?
 
   thread                Thread         @relation(fields: [threadId], references: [id], onDelete: Cascade)
   sender                User           @relation(fields: [senderId], references: [id])
+  hides                 MessageHide[]
 
   @@map("messages")
+}
+
+// Per-user "delete for me": hides a single message from one participant only.
+model MessageHide {
+  id        String   @id @default(uuid())
+  messageId String   @map("message_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+  @@map("message_hides")
 }
 
 enum TaskStatus {
