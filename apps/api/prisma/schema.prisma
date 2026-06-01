@@ -10,23 +10,70 @@ datasource db {
 model User {
   id                     String        @id                               @default(uuid())
   email                  String        @unique
-  passwordHash           String        @map("password_hash")
+  passwordHash           String?       @map("password_hash")
+  emailVerifiedAt        DateTime?     @map("email_verified_at")
   username               String?       @unique
   displayName            String?       @map("display_name")
   birthDate              DateTime?     @map("birth_date") @db.Date
   avatarUrl              String?       @map("avatar_url")
   profileCompletedAt     DateTime?     @map("profile_completed_at")
   createdAt              DateTime      @default(now())                  @map("created_at")
+  passwordChangedAt      DateTime      @default(now())                  @map("password_changed_at")
   deletedAt              DateTime?     @map("deleted_at")
 
+  accounts               Account[]
   threadsAsLow           Thread[]      @relation("ThreadUserLow")
   threadsAsHigh          Thread[]      @relation("ThreadUserHigh")
   messagesSent           Message[]
   tasksAssigned          Task[]        @relation("TaskAssignee")
   tasksCreated           Task[]        @relation("TaskCreator")
   messageHides           MessageHide[]
+  passwordResetTokens    PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   @@map("users")
+}
+
+model Account {
+  id                String   @id @default(uuid())
+  userId            String   @map("user_id")
+  provider          String
+  providerAccountId String   @map("provider_account_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("email_verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model Thread {

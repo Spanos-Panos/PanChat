@@ -1,10 +1,24 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, Fragment } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  Fragment,
+} from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import styles from "./App.module.css";
-import { apiFetch , apiUploadAvatar , avatarSrc } from "./lib/api";
+import {
+  API_BASE,
+  ApiError,
+  apiFetch,
+  apiUploadAvatar,
+  avatarSrc,
+} from "./lib/api";
+import { LIMITS } from "./lib/limits";
+import { PrivacyPage } from "./PrivacyPage";
 import { io, type Socket } from "socket.io-client";
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
 // Typing signal tuning. We send a "start" heartbeat at most every
 // HEARTBEAT_MS while actively typing, send "stop" after IDLE_STOP_MS of no
@@ -52,6 +66,12 @@ function mergeTaskOrder(fetchedIds: string[], savedOrder: string[]): string[] {
   return [...newIds, ...kept];
 }
 
+function formatTaskStatus(status: "open" | "cleared" | "deleted"): string {
+  if (status === "cleared") return "Done";
+  if (status === "deleted") return "Deleted";
+  return "Open";
+}
+
 function formatTaskAge(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diffMs / 60000);
@@ -95,6 +115,7 @@ type AuthUser = {
   displayName?: string | null;
   profileCompleted: boolean;
   avatarUrl?: string | null;
+  emailVerified?: boolean;
 };
 
 type MeResponse = {
@@ -173,7 +194,18 @@ function sortInboxTasks(tasks: InboxTask[], order: string[]): InboxTask[] {
   });
 }
 
-type AuthView = "login" | "register";
+type AuthView =
+  | "login"
+  | "register"
+  | "forgot"
+  | "reset"
+  | "verify-pending";
+
+type AuthProviders = {
+  google: boolean;
+  emailVerificationRequired: boolean;
+};
+type AppPage = "main" | "privacy";
 
 function AuthBrand() {
   return (
@@ -225,6 +257,15 @@ function App() {
   const [sending, setSending] = useState(false);
   const [menuMessageId, setMenuMessageId] = useState<string | null>(null);
   const [authView, setAuthView] = useState<AuthView>("login");
+  const [resetToken, setResetToken] = useState("");
+  const [authSuccess, setAuthSuccess] = useState<string | null>(null);
+  const [forgotDevResetUrl, setForgotDevResetUrl] = useState<string | null>(
+    null,
+  );
+  const [forgotHintStatus, setForgotHintStatus] = useState<string | null>(null);
+  const [authProviders, setAuthProviders] = useState<AuthProviders | null>(null);
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState("");
+  const [devVerifyUrl, setDevVerifyUrl] = useState<string | null>(null);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [profileUsername, setProfileUsername] = useState("");
   const [profileDisplayName, setProfileDisplayName] = useState("");
@@ -241,6 +282,11 @@ function App() {
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [peoplePanelOpen, setPeoplePanelOpen] = useState(true);
   const [tasksPanelOpen, setTasksPanelOpen] = useState(true);
+  const [appPage, setAppPage] = useState<AppPage>("main");
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState("");
+  const [accountBusy, setAccountBusy] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarBust, setAvatarBust] = useState<Record<string, number>>({});
@@ -249,11 +295,72 @@ function App() {
   // since chat is 1-to-1, so it powers both the chat panel and People list).
   const [typingUserIds, setTypingUserIds] = useState<Set<string>>(new Set());
 
+  const applySessionUser = useCallback((next: AuthUser) => {
+    setUser(next);
+    if (next.avatarUrl) {
+      setAvatarBust((prev) =>
+        prev[next.id] != null ? prev : { ...prev, [next.id]: Date.now() },
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const resetFromUrl = params.get("reset");
+    const verifyFromUrl = params.get("verify");
+    const authError = params.get("auth_error");
+
+    if (resetFromUrl) {
+      setResetToken(resetFromUrl);
+      setAuthView("reset");
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+
+    if (verifyFromUrl) {
+      window.history.replaceState({}, "", window.location.pathname);
+      void (async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const data = await apiFetch<LoginResponse & { message?: string }>(
+            "/api/v1/auth/verify-email",
+            { method: "POST", body: { token: verifyFromUrl } },
+          );
+          applySessionUser(data.user);
+          setAuthSuccess(data.message ?? "Email verified.");
+        } catch (err) {
+          setError(
+            err instanceof Error ? err.message : "Verification failed",
+          );
+          setAuthView("verify-pending");
+        } finally {
+          setLoading(false);
+        }
+      })();
+      return;
+    }
+
+    if (authError) {
+      setError(decodeURIComponent(authError));
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [applySessionUser]);
+
+  useEffect(() => {
+    if (user) return;
+    apiFetch<AuthProviders>("/api/v1/auth/providers")
+      .then(setAuthProviders)
+      .catch(() =>
+        setAuthProviders({ google: false, emailVerificationRequired: false }),
+      );
+  }, [user]);
+
   useEffect(() => {
     async function loadMe() {
       try {
         const data = await apiFetch<MeResponse>("/api/v1/auth/me");
-        setUser(data.user);
+        applySessionUser(data.user);
       } catch {
         setUser(null);
       } finally {
@@ -262,7 +369,7 @@ function App() {
     }
 
     loadMe();
-  }, []);
+  }, [applySessionUser]);
 
   useEffect(() => {
     if (!user) return;
@@ -786,6 +893,7 @@ function App() {
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setAuthSuccess(null);
     setLoading(true);
 
     try {
@@ -793,10 +901,107 @@ function App() {
         method: "POST",
         body: { email, password },
       });
-      setUser(data.user);
+      applySessionUser(data.user);
     } catch (err) {
       setUser(null);
-      setError(err instanceof Error ? err.message : "Login failed");
+      if (err instanceof ApiError && err.code === "EMAIL_NOT_VERIFIED") {
+        setPendingVerifyEmail(email);
+        setAuthView("verify-pending");
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Login failed");
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResendVerification() {
+    setError(null);
+    setAuthSuccess(null);
+    setLoading(true);
+    try {
+      const data = await apiFetch<{
+        ok: boolean;
+        message: string;
+        devVerifyUrl?: string;
+      }>("/api/v1/auth/resend-verification", {
+        method: "POST",
+        body: { email: pendingVerifyEmail || email },
+      });
+      setAuthSuccess(data.message);
+      setDevVerifyUrl(data.devVerifyUrl ?? null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not resend verification",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function startGoogleSignIn() {
+    window.location.href = `${API_BASE}/api/v1/auth/google`;
+  }
+
+  async function handleForgotPassword(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setAuthSuccess(null);
+    setForgotDevResetUrl(null);
+    setForgotHintStatus(null);
+    setLoading(true);
+
+    try {
+      const data = await apiFetch<{
+        ok: boolean;
+        message: string;
+        hint?: { status?: string; devResetUrl?: string };
+      }>("/api/v1/auth/forgot-password", {
+        method: "POST",
+        body: { email },
+      });
+      setAuthSuccess(data.message);
+      setForgotDevResetUrl(data.hint?.devResetUrl ?? null);
+      setForgotHintStatus(data.hint?.status ?? null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to request password reset",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleResetPassword(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setAuthSuccess(null);
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const data = await apiFetch<{ ok: boolean; message: string }>(
+        "/api/v1/auth/reset-password",
+        {
+          method: "POST",
+          body: { token: resetToken, password },
+        },
+      );
+      setAuthSuccess(data.message);
+      setPassword("");
+      setConfirmPassword("");
+      setResetToken("");
+      setAuthView("login");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to reset password",
+      );
     } finally {
       setLoading(false);
     }
@@ -814,11 +1019,30 @@ function App() {
     setLoading(true);
 
     try {
-      const data = await apiFetch<LoginResponse>("/api/v1/auth/register", {
+      const data = await apiFetch<
+        | LoginResponse
+        | {
+            needsEmailVerification: true;
+            message: string;
+            email: string;
+            devVerifyUrl?: string;
+          }
+      >("/api/v1/auth/register", {
         method: "POST",
         body: { email, password },
       });
-      setUser(data.user);
+
+      if ("needsEmailVerification" in data && data.needsEmailVerification) {
+        setPendingVerifyEmail(data.email);
+        setDevVerifyUrl(data.devVerifyUrl ?? null);
+        setAuthSuccess(data.message);
+        setAuthView("verify-pending");
+        return;
+      }
+
+      if ("user" in data) {
+        applySessionUser(data.user);
+      }
     } catch (err) {
       setUser(null);
       setError(err instanceof Error ? err.message : "Registration failed");
@@ -841,7 +1065,7 @@ function App() {
           birthDate: profileBirthDate || undefined,
         },
       });
-      setUser(data.user);
+      applySessionUser(data.user);
     } catch (err) {
       setProfileError(
         err instanceof Error ? err.message : "Failed to save profile",
@@ -862,7 +1086,7 @@ function App() {
       const data = await apiUploadAvatar(file);
       const version = Date.now();
       setAvatarBust((prev) => ({ ...prev, [data.user.id]: version }));
-      setUser(data.user);
+      applySessionUser(data.user);
       setUsers((prev) =>
         prev.map((u) =>
           u.id === data.user.id
@@ -877,6 +1101,60 @@ function App() {
     } finally {
       setUploadingAvatar(false);
       e.target.value = "";
+    }
+  }
+
+  async function handleExportData() {
+    if (!user) return;
+    setAccountBusy(true);
+    setAccountError(null);
+    try {
+      const data = await apiFetch<Record<string, unknown>>(
+        "/api/v1/auth/me/export",
+      );
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `panchat-export-${user.id.slice(0, 8)}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setAccountOpen(false);
+    } catch (err) {
+      setAccountError(
+        err instanceof Error ? err.message : "Failed to export data",
+      );
+    } finally {
+      setAccountBusy(false);
+    }
+  }
+
+  async function handleDeleteAccount(e: FormEvent) {
+    e.preventDefault();
+    if (!user) return;
+    setAccountBusy(true);
+    setAccountError(null);
+    try {
+      await apiFetch("/api/v1/auth/me/delete", {
+        method: "POST",
+        body: { confirmEmail: deleteConfirmEmail },
+      });
+      setAccountOpen(false);
+      setDeleteConfirmEmail("");
+      setUser(null);
+      setActiveThread(null);
+      setMessages([]);
+      setUsers([]);
+      setInboxTasks([]);
+      setAppPage("main");
+    } catch (err) {
+      setAccountError(
+        err instanceof Error ? err.message : "Failed to delete account",
+      );
+    } finally {
+      setAccountBusy(false);
     }
   }
 
@@ -909,6 +1187,22 @@ function App() {
     [inboxTasks, taskOrder],
   );
 
+  if (appPage === "privacy") {
+    return <PrivacyPage onBack={() => setAppPage("main")} />;
+  }
+
+  const privacyFooter = (
+    <footer className={styles.appFooter}>
+      <button
+        type="button"
+        className={styles.footerLink}
+        onClick={() => setAppPage("privacy")}
+      >
+        Privacy policy
+      </button>
+    </footer>
+  );
+
   if (checkingSession) {
     return (
       <div className={styles.authPage}>
@@ -924,6 +1218,7 @@ function App() {
               <span />
               <span />
             </div>
+            {privacyFooter}
           </div>
         </div>
       </div>
@@ -940,12 +1235,52 @@ function App() {
               <span className={styles.authStep}>Step 1 of 1</span>
               <h2 className={styles.authTitle}>Set up your profile</h2>
               <p className={styles.authSubtitle}>
-                Signed in as <strong>{user.email}</strong>. Pick a username to
-                join PanChat.
+                Signed in as <strong>{user.email}</strong>. Add how you want to
+                appear in PanChat — photo is optional.
               </p>
             </div>
 
             <form className={styles.authForm} onSubmit={handleCompleteProfile}>
+              <div className={styles.profileAvatarBlock}>
+                {avatarSrc(user.avatarUrl, avatarBust[user.id]) ? (
+                  <img
+                    className={styles.profileAvatarImg}
+                    src={avatarSrc(user.avatarUrl, avatarBust[user.id])!}
+                    alt=""
+                  />
+                ) : (
+                  <span className={styles.profileAvatarPlaceholder}>
+                    {(profileDisplayName ||
+                      profileUsername ||
+                      user.email)
+                      .charAt(0)
+                      .toUpperCase()}
+                  </span>
+                )}
+                <div className={styles.profileAvatarMeta}>
+                  <label className={styles.profileAvatarBtn}>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleAvatarChange}
+                      disabled={uploadingAvatar || loading}
+                      hidden
+                    />
+                    {uploadingAvatar
+                      ? "Uploading…"
+                      : user.avatarUrl
+                        ? "Change photo"
+                        : "Add photo (optional)"}
+                  </label>
+                  <p className={styles.profileAvatarHint}>
+                    JPEG, PNG or WebP · max 5 MB
+                  </p>
+                  {avatarError && (
+                    <p className={styles.errorText}>{avatarError}</p>
+                  )}
+                </div>
+              </div>
+
               <label className={styles.fieldLabel}>
                 <span className={styles.fieldLabelText}>Username</span>
                 <input
@@ -957,6 +1292,8 @@ function App() {
                   minLength={3}
                   placeholder="panos"
                   autoComplete="username"
+                  minLength={LIMITS.usernameMin}
+                  maxLength={LIMITS.usernameMax}
                 />
               </label>
               <label className={styles.fieldLabel}>
@@ -970,6 +1307,7 @@ function App() {
                   onChange={(e) => setProfileDisplayName(e.target.value)}
                   placeholder="Panos"
                   autoComplete="name"
+                  maxLength={LIMITS.displayNameMax}
                 />
               </label>
               <label className={styles.fieldLabel}>
@@ -1002,6 +1340,7 @@ function App() {
             >
               Log out
             </button>
+            {privacyFooter}
           </div>
         </div>
       </div>
@@ -1067,13 +1406,75 @@ function App() {
               )}
             </div>
           </div>
-          <button
-            type="button"
-            className={styles.btnGhost}
-            onClick={HandleLogout}
-          >
-            Log out
-          </button>
+          <div className={styles.headerActions}>
+            <div className={styles.accountMenuWrap}>
+              <button
+                type="button"
+                className={styles.btnGhost}
+                onClick={() => setAccountOpen((open) => !open)}
+                aria-expanded={accountOpen}
+                aria-haspopup="true"
+              >
+                Account
+              </button>
+              {accountOpen && (
+                <div className={styles.accountMenu} role="menu">
+                  <button
+                    type="button"
+                    className={styles.accountMenuItem}
+                    disabled={accountBusy}
+                    onClick={handleExportData}
+                  >
+                    Download my data
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.accountMenuItem}
+                    onClick={() => {
+                      setAccountOpen(false);
+                      setAppPage("privacy");
+                    }}
+                  >
+                    Privacy policy
+                  </button>
+                  <form
+                    className={styles.deleteAccountForm}
+                    onSubmit={handleDeleteAccount}
+                  >
+                    <p className={styles.deleteAccountHint}>
+                      Delete account — type your email to confirm:
+                    </p>
+                    <input
+                      className={styles.fieldInput}
+                      type="email"
+                      value={deleteConfirmEmail}
+                      onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                      placeholder={user.email}
+                      maxLength={LIMITS.emailMax}
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className={styles.btnDanger}
+                      disabled={accountBusy}
+                    >
+                      {accountBusy ? "…" : "Delete account"}
+                    </button>
+                  </form>
+                  {accountError && (
+                    <p className={styles.errorText}>{accountError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              className={styles.btnGhost}
+              onClick={HandleLogout}
+            >
+              Log out
+            </button>
+          </div>
         </header>
 
         <div className={styles.body}>
@@ -1305,7 +1706,7 @@ function App() {
                                         <strong>Task</strong>
                                         <p>{m.task.body}</p>
                                         <span className={styles.taskStatus}>
-                                          {m.task.status}
+                                          {formatTaskStatus(m.task.status)}
                                         </span>
                                         {m.task.status === "open" && (
                                           <div className={styles.taskActions}>
@@ -1319,7 +1720,7 @@ function App() {
                                                 )
                                               }
                                             >
-                                              Clear
+                                              Done
                                             </button>
                                             <button
                                               type="button"
@@ -1447,26 +1848,29 @@ function App() {
                         className={styles.taskInput}
                         value={taskText}
                         onChange={(e) => setTaskText(e.target.value)}
-                        placeholder={`What should ${peerName} do?`}
-                      />
-                    )}
+                      placeholder={`What should ${peerName} do?`}
+                      maxLength={LIMITS.taskBodyMax}
+                    />
+                  )}
 
-                    <div className={styles.composerRow}>
-                      <input
-                        type="text"
-                        className={styles.messageInput}
-                        value={messageText}
-                        onChange={(e) =>
-                          handleMessageTextChange(e.target.value)
-                        }
-                        onBlur={stopTypingSignal}
-                        placeholder={`Message ${peerName}…`}
-                        required
-                      />
+                  <div className={styles.composerRow}>
+                    <input
+                      type="text"
+                      className={styles.messageInput}
+                      value={messageText}
+                      onChange={(e) =>
+                        handleMessageTextChange(e.target.value)
+                      }
+                      onBlur={stopTypingSignal}
+                      placeholder={`Message ${peerName}…`}
+                      maxLength={LIMITS.messageBodyMax}
+                      required
+                    />
                       <button
                         type="submit"
                         className={styles.btnPrimary}
                         disabled={sending}
+                        aria-label="Send message"
                       >
                         {sending ? "…" : "Send"}
                       </button>
@@ -1640,7 +2044,7 @@ function App() {
                                   handleUpdateTask(t.id, "cleared")
                                 }
                               >
-                                Clear
+                                Done
                               </button>
                             )}
 
@@ -1704,6 +2108,7 @@ function App() {
             )}
           </aside>
         </div>
+        {privacyFooter}
       </div>
     );
   }
@@ -1715,16 +2120,66 @@ function App() {
         <div className={styles.authCard}>
           <div className={styles.authCardHeader}>
             <h2 className={styles.authTitle}>
-              {authView === "login" ? "Welcome back" : "Create account"}
+              {authView === "login" && "Welcome back"}
+              {authView === "register" && "Create account"}
+              {authView === "forgot" && "Forgot password"}
+              {authView === "reset" && "Choose a new password"}
+              {authView === "verify-pending" && "Verify your email"}
             </h2>
             <p className={styles.authSubtitle}>
-              {authView === "login"
-                ? "Sign in to continue to PanChat"
-                : "Join PanChat — it only takes a minute"}
+              {authView === "login" && "Sign in to continue to PanChat"}
+              {authView === "register" &&
+                "Join PanChat — email verification may be required before your first sign-in."}
+              {authView === "forgot" &&
+                "We will email a reset link to addresses that have an account."}
+              {authView === "reset" && "Enter your new password below."}
+              {authView === "verify-pending" &&
+                "Confirm your email to prove you own the inbox — then you can sign in."}
             </p>
           </div>
 
-        {authView === "login" ? (
+        {authView === "verify-pending" && (
+          <div className={styles.authForm}>
+            <p className={styles.infoBanner}>
+              {pendingVerifyEmail
+                ? `We sent a link to ${pendingVerifyEmail}. During local dev the link uses localhost — open it on the same laptop that runs pnpm dev:web (not on your phone). Or use Resend → Resend verification and open the new link on this PC.`
+                : "Check your email for the verification link."}
+            </p>
+            {devVerifyUrl && (
+              <p className={styles.devResetLinkBox}>
+                <a className={styles.devResetLink} href={devVerifyUrl}>
+                  Open verification link (dev)
+                </a>
+              </p>
+            )}
+            {error && <p className={styles.errorBanner}>{error}</p>}
+            {authSuccess && (
+              <p className={styles.successBanner}>{authSuccess}</p>
+            )}
+            <button
+              type="button"
+              className={styles.btnPrimary}
+              disabled={loading}
+              onClick={() => void handleResendVerification()}
+            >
+              {loading ? "Sending…" : "Resend verification email"}
+            </button>
+            <button
+              type="button"
+              className={styles.btnText}
+              onClick={() => {
+                setAuthView("login");
+                setError(null);
+                setAuthSuccess(null);
+                setDevVerifyUrl(null);
+              }}
+            >
+              Back to sign in
+            </button>
+          </div>
+        )}
+
+        {authView === "login" && (
           <form className={styles.authForm} onSubmit={handleLogin}>
             <label className={styles.fieldLabel}>
               <span className={styles.fieldLabelText}>Email</span>
@@ -1736,6 +2191,7 @@ function App() {
                 required
                 autoComplete="email"
                 placeholder="you@example.com"
+                maxLength={LIMITS.emailMax}
               />
             </label>
             <label className={styles.fieldLabel}>
@@ -1746,11 +2202,32 @@ function App() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={LIMITS.passwordMin}
+                maxLength={LIMITS.passwordMax}
                 autoComplete="current-password"
                 placeholder="••••••••"
               />
             </label>
+            <p className={styles.authHelperRow}>
+              <button
+                type="button"
+                className={styles.authLink}
+                onClick={() => {
+                  setAuthView("forgot");
+                  setForgotDevResetUrl(null);
+                  setForgotHintStatus(null);
+                  setAuthSuccess(null);
+                  setError(null);
+                  setAuthSuccess(null);
+                }}
+              >
+                Forgot password?
+              </button>
+            </p>
             {error && <p className={styles.errorBanner}>{error}</p>}
+            {authSuccess && (
+              <p className={styles.successBanner}>{authSuccess}</p>
+            )}
             <button
               type="submit"
               className={styles.btnPrimary}
@@ -1758,9 +2235,25 @@ function App() {
             >
               {loading ? "Signing in…" : "Sign in"}
             </button>
+            {authProviders?.google && (
+              <>
+                <div className={styles.authDivider}>
+                  <span>or</span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.btnGoogle}
+                  onClick={startGoogleSignIn}
+                >
+                  Continue with Google
+                </button>
+              </>
+            )}
           </form>
-        ) : (
-          <form className={styles.authForm} onSubmit={HandleRegister}>
+        )}
+
+        {authView === "forgot" && (
+          <form className={styles.authForm} onSubmit={handleForgotPassword}>
             <label className={styles.fieldLabel}>
               <span className={styles.fieldLabelText}>Email</span>
               <input
@@ -1771,17 +2264,104 @@ function App() {
                 required
                 autoComplete="email"
                 placeholder="you@example.com"
+                maxLength={LIMITS.emailMax}
               />
             </label>
+            {error && <p className={styles.errorBanner}>{error}</p>}
+            {authSuccess && (
+              <p
+                className={
+                  forgotHintStatus === "not_found" ||
+                  forgotHintStatus === "deleted" ||
+                  forgotHintStatus === "invalid_email"
+                    ? styles.errorBanner
+                    : forgotDevResetUrl
+                      ? styles.infoBanner
+                      : styles.successBanner
+                }
+              >
+                {authSuccess}
+              </p>
+            )}
+            {forgotDevResetUrl && (
+              <p className={styles.devResetLinkBox}>
+                <a
+                  className={styles.devResetLink}
+                  href={forgotDevResetUrl}
+                >
+                  Open password reset link
+                </a>
+                <span className={styles.devResetHint}>
+                  Expires in 1 hour · also logged in the API terminal
+                </span>
+              </p>
+            )}
+            <button
+              type="submit"
+              className={styles.btnPrimary}
+              disabled={loading}
+            >
+              {loading ? "Sending…" : "Send reset link"}
+            </button>
+            <button
+              type="button"
+              className={styles.btnText}
+              onClick={() => {
+                setAuthView("login");
+                setError(null);
+                setForgotDevResetUrl(null);
+                setForgotHintStatus(null);
+                setAuthSuccess(null);
+              }}
+            >
+              Back to sign in
+            </button>
+            <p className={styles.authFootnote}>
+              Not sure this email has an account? Try{" "}
+              <button
+                type="button"
+                className={styles.inlineLinkBtn}
+                onClick={() => {
+                  setAuthView("login");
+                  setError(null);
+                  setForgotDevResetUrl(null);
+                  setForgotHintStatus(null);
+                  setAuthSuccess(null);
+                }}
+              >
+                Sign in
+              </button>{" "}
+              — wrong password means the account exists. Or{" "}
+              <button
+                type="button"
+                className={styles.inlineLinkBtn}
+                onClick={() => {
+                  setAuthView("register");
+                  setError(null);
+                  setForgotDevResetUrl(null);
+                  setForgotHintStatus(null);
+                  setAuthSuccess(null);
+                }}
+              >
+                create a new account
+              </button>
+              .
+            </p>
+          </form>
+        )}
+
+        {authView === "reset" && (
+          <form className={styles.authForm} onSubmit={handleResetPassword}>
             <label className={styles.fieldLabel}>
-              <span className={styles.fieldLabelText}>Password</span>
+              <span className={styles.fieldLabelText}>New password</span>
               <input
                 className={styles.fieldInput}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
+                minLength={LIMITS.passwordMin}
+                maxLength={LIMITS.passwordMax}
                 autoComplete="new-password"
                 placeholder="At least 8 characters"
               />
@@ -1794,7 +2374,64 @@ function App() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                minLength={8}
+                minLength={LIMITS.passwordMin}
+                maxLength={LIMITS.passwordMax}
+                autoComplete="new-password"
+              />
+            </label>
+            {error && <p className={styles.errorBanner}>{error}</p>}
+            {authSuccess && (
+              <p className={styles.successBanner}>{authSuccess}</p>
+            )}
+            <button
+              type="submit"
+              className={styles.btnPrimary}
+              disabled={loading || !resetToken}
+            >
+              {loading ? "Saving…" : "Update password"}
+            </button>
+          </form>
+        )}
+
+        {authView === "register" && (
+          <form className={styles.authForm} onSubmit={HandleRegister}>
+            <label className={styles.fieldLabel}>
+              <span className={styles.fieldLabelText}>Email</span>
+              <input
+                className={styles.fieldInput}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                placeholder="you@example.com"
+                maxLength={LIMITS.emailMax}
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              <span className={styles.fieldLabelText}>Password</span>
+              <input
+                className={styles.fieldInput}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={LIMITS.passwordMin}
+                maxLength={LIMITS.passwordMax}
+                autoComplete="new-password"
+                placeholder="At least 8 characters"
+              />
+            </label>
+            <label className={styles.fieldLabel}>
+              <span className={styles.fieldLabelText}>Confirm password</span>
+              <input
+                className={styles.fieldInput}
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={LIMITS.passwordMin}
+                maxLength={LIMITS.passwordMax}
                 autoComplete="new-password"
                 placeholder="Repeat password"
               />
@@ -1807,40 +2444,59 @@ function App() {
             >
               {loading ? "Creating account…" : "Create account"}
             </button>
+            {authProviders?.google && (
+              <>
+                <div className={styles.authDivider}>
+                  <span>or</span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.btnGoogle}
+                  onClick={startGoogleSignIn}
+                >
+                  Continue with Google
+                </button>
+              </>
+            )}
           </form>
         )}
 
-        <p className={styles.authSwitch}>
-          {authView === "login" ? (
-            <>
-              No account?{" "}
-              <button
-                type="button"
-                className={styles.authLink}
-                onClick={() => {
-                  setAuthView("register");
-                  setError(null);
-                }}
-              >
-                Create one
-              </button>
-            </>
-          ) : (
-            <>
-              Already have an account?{" "}
-              <button
-                type="button"
-                className={styles.authLink}
-                onClick={() => {
-                  setAuthView("login");
-                  setError(null);
-                }}
-              >
-                Sign in
-              </button>
-            </>
-          )}
-        </p>
+        {(authView === "login" || authView === "register") && (
+          <p className={styles.authSwitch}>
+            {authView === "login" ? (
+              <>
+                No account?{" "}
+                <button
+                  type="button"
+                  className={styles.authLink}
+                  onClick={() => {
+                    setAuthView("register");
+                    setError(null);
+                    setAuthSuccess(null);
+                  }}
+                >
+                  Create one
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  className={styles.authLink}
+                  onClick={() => {
+                    setAuthView("login");
+                    setError(null);
+                    setAuthSuccess(null);
+                  }}
+                >
+                  Sign in
+                </button>
+              </>
+            )}
+          </p>
+        )}
+        {privacyFooter}
         </div>
       </div>
     </div>

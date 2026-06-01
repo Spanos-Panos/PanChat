@@ -762,6 +762,116 @@
   border: 1px solid rgba(251, 113, 133, 0.25);
 }
 
+.successBanner {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--success);
+  background: var(--success-muted);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+}
+
+.infoBanner {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+.devResetLinkBox {
+  margin: 0;
+  padding: 0.75rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background: var(--brand-muted);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.devResetLink {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--brand);
+  word-break: break-all;
+}
+
+.devResetHint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.authFootnote {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.inlineLinkBtn {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--brand);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inlineLinkBtn:hover {
+  color: var(--brand-hover);
+}
+
+.authDivider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.35rem 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.authDivider::before,
+.authDivider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.btnGoogle {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: #fff;
+  color: #1f1f1f;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.btnGoogle:hover {
+  background: #f4f4f5;
+  border-color: #d4d4d8;
+}
+
+.authHelperRow {
+  margin: -0.25rem 0 0;
+  text-align: right;
+}
+
 .panChatTitle {
   font-family: var(--font-display);
   color: var(--brand);
@@ -940,6 +1050,72 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.profileAvatarBlock {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+}
+
+.profileAvatarImg,
+.profileAvatarPlaceholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.profileAvatarPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  background: linear-gradient(145deg, #334155, #1e293b);
+  border: 2px solid var(--border-strong);
+}
+
+.profileAvatarMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.profileAvatarBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-full);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--brand-hover);
+  background: var(--brand-muted);
+  border: 1px solid rgba(79, 140, 255, 0.25);
+  cursor: pointer;
+  width: fit-content;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.profileAvatarBtn:hover {
+  color: #fff;
+  background: rgba(79, 140, 255, 0.28);
+}
+
+.profileAvatarHint {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--text-faint);
 }
 
 .fieldLabel {
@@ -1135,8 +1311,9 @@
 
 .taskStatus {
   font-size: 0.75rem;
-  color: #86efac;
-  text-transform: capitalize;
+  font-weight: 600;
+  color: var(--success);
+  text-transform: none;
 }
 
 .taskActions {
@@ -1588,4 +1765,164 @@
   30% {
     opacity: 1;
   }
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.accountMenuWrap {
+  position: relative;
+}
+
+.accountMenu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 50;
+  width: min(280px, 85vw);
+  padding: 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.accountMenuItem {
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.accountMenuItem:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.deleteAccountForm {
+  margin-top: 0.35rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.deleteAccountHint {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--text-faint);
+  line-height: 1.4;
+}
+
+.btnDanger {
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  background: var(--danger-muted);
+  color: var(--danger);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnDanger:hover:not(:disabled) {
+  background: rgba(251, 113, 133, 0.2);
+}
+
+.btnDanger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.appFooter {
+  flex-shrink: 0;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: rgba(15, 15, 18, 0.6);
+}
+
+.footerLink {
+  border: none;
+  background: none;
+  color: var(--text-faint);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.footerLink:hover {
+  color: var(--brand-hover);
+}
+
+.legalPage {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-y: auto;
+  padding: 1.5rem 1rem;
+  background: var(--bg-root);
+}
+
+.legalCard {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.legalTitle {
+  margin: 1rem 0 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+}
+
+.legalUpdated {
+  margin: 0 0 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--text-faint);
+}
+
+.legalSection {
+  margin-bottom: 1.25rem;
+}
+
+.legalSection h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.legalSection ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.legalSection p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.legalNote {
+  margin: 1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+  font-style: italic;
 }

@@ -1,6 +1,10 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { User } from "@prisma/client";
-import { prisma } from "./prisma.js";
+import {
+  isEmailVerificationRequired,
+  userEmailIsVerified,
+} from "./auth-policy.js";
+import { authenticateSessionToken } from "./session.js";
 
 export async function requireUser(
   app: FastifyInstance,
@@ -14,21 +18,18 @@ export async function requireUser(
     return null;
   }
 
-  let payload: { sub: string };
+  const user = await authenticateSessionToken(app, token);
 
-  try {
-    payload = await app.jwt.verify<{ sub: string }>(token);
-  } catch {
+  if (!user) {
     reply.code(401).send({ error: "Not authenticated" });
     return null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: payload.sub },
-  });
-
-  if (!user || user.deletedAt) {
-    reply.code(401).send({ error: "Not authenticated" });
+  if (isEmailVerificationRequired() && !userEmailIsVerified(user)) {
+    reply.code(403).send({
+      error: "Please verify your email before continuing.",
+      code: "EMAIL_NOT_VERIFIED",
+    });
     return null;
   }
 

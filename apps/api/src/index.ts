@@ -8,6 +8,60 @@ import cookie from "@fastify/cookie";
 import jwt from "@fastify/jwt";
 import bcrypt from "bcrypt";
 import { requireUser } from "./lib/auth.js";
+import {
+  normalizeEmail,
+  parseBirthDate,
+  parseDisplayName,
+  parseMessageBody,
+  parseTaskBody,
+  parseTaskStatus,
+  parseUsername,
+  parseUuid,
+  validatePassword,
+} from "./lib/validate.js";
+import { randomBytes } from "node:crypto";
+import type { FastifyReply } from "fastify";
+import {
+  createPasswordResetToken,
+  hashResetToken,
+} from "./lib/reset-token.js";
+import {
+  sendPasswordChangedEmail,
+  sendPasswordResetEmail,
+} from "./lib/mail.js";
+import {
+  authenticateSessionToken,
+  signSessionToken,
+} from "./lib/session.js";
+import { setSessionCookie, clearSessionCookie } from "./lib/auth-cookies.js";
+import { serializeAuthUser } from "./lib/auth-serialize.js";
+import {
+  isEmailVerificationRequired,
+  isGoogleAuthEnabled,
+} from "./lib/auth-policy.js";
+import { issueEmailVerification, verifyEmailWithToken } from "./lib/email-verification.js";
+import { registerGoogleAuth } from "./lib/google-oauth.js";
+
+const PASSWORD_RESET_GENERIC_MSG =
+  "If that email is registered, you will receive a reset link shortly.";
+
+type PasswordResetHint = {
+  status: "not_found" | "invalid_email" | "deleted" | "email_sent" | "dev_link";
+  devResetUrl?: string;
+};
+
+function passwordResetResponse(
+  reply: FastifyReply,
+  message: string,
+  hint?: PasswordResetHint,
+) {
+  if (process.env.NODE_ENV === "production" || !hint) {
+    return reply.send({ ok: true, message: PASSWORD_RESET_GENERIC_MSG });
+  }
+  return reply.send({ ok: true, message, hint });
+}
+import rateLimit from "@fastify/rate-limit";
+import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import {mkdir , writeFile} from "node:fs/promises";
@@ -19,6 +73,19 @@ const onlineCounts = new Map<string, number>();
 
 function orderUserPair(idA: string, idB: string): [string, string] {
   return idA < idB ? [idA, idB] : [idB, idA];
+}
+
+/** Same user shape for login, register, /me, and profile — includes avatarUrl. */
+function requireUuid(
+  raw: string | undefined,
+  reply: FastifyReply,
+): string | null {
+  const id = parseUuid(raw);
+  if (!id) {
+    reply.code(400).send({ error: "Invalid id" });
+    return null;
+  }
+  return id;
 }
 
 type MessageWithTask = {
@@ -82,7 +149,40 @@ if (!jwtSecret) {
 const host = process.env.API_HOST ?? "0.0.0.0";
 const port = Number(process.env.API_PORT ?? 4000);
 
-const app = Fastify({ logger: true });
+const isProduction = process.env.NODE_ENV === "production";
+
+const app = Fastify({
+  logger: true,
+  bodyLimit: 1_048_576,
+});
+
+await app.register(helmet, {
+  contentSecurityPolicy: isProduction,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+});
+
+const rateLimitMax = Number(process.env.RATE_LIMIT_MAX ?? 200);
+const rateLimitWindow = process.env.RATE_LIMIT_WINDOW ?? "1 minute";
+const authRateLimitMax = Number(process.env.AUTH_RATE_LIMIT_MAX ?? 15);
+
+await app.register(rateLimit, {
+  global: true,
+  max: rateLimitMax,
+  timeWindow: rateLimitWindow,
+  allowList: (request) => request.url === "/health",
+});
+
+app.setErrorHandler((error, request, reply) => {
+  request.log.error(error);
+  const err = error as { statusCode?: number; message?: string };
+  const statusCode = err.statusCode ?? 500;
+  if (statusCode >= 500 && isProduction) {
+    return reply.code(500).send({ error: "Internal server error" });
+  }
+  return reply.code(statusCode).send({
+    error: err.message || "Request failed",
+  });
+});
 
 await app.register(cors, {
   origin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
@@ -108,6 +208,15 @@ await app.register(jwt, {
   secret: jwtSecret,
 });
 
+await registerGoogleAuth(app);
+
+app.get("/api/v1/auth/providers", async () => {
+  return {
+    google: isGoogleAuthEnabled(),
+    emailVerificationRequired: isEmailVerificationRequired(),
+  };
+});
+
 app.get("/health", async () => {
   return { ok: true };
 });
@@ -117,7 +226,14 @@ app.get("/health/db", async () => {
   return { ok: true, database: "connected" };
 });
 
-app.post("/api/v1/auth/register", async (request, reply) => {
+app.post(
+  "/api/v1/auth/register",
+  {
+    config: {
+      rateLimit: { max: authRateLimitMax, timeWindow: "15 minutes" },
+    },
+  },
+  async (request, reply) => {
   const { email, password } = request.body as {
     email?: string;
     password?: string;
@@ -127,12 +243,14 @@ app.post("/api/v1/auth/register", async (request, reply) => {
     return reply.code(400).send({ error: "Email and password required" });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return reply.code(400).send({ error: "Invalid email address" });
+  }
 
-  if (password.length < 8) {
-    return reply
-      .code(400)
-      .send({ error: "Password must be at least 8 characters" });
+  const passwordError = validatePassword(password);
+  if (passwordError) {
+    return reply.code(400).send({ error: passwordError });
   }
 
   const existing = await prisma.user.findUnique({
@@ -145,32 +263,62 @@ app.post("/api/v1/auth/register", async (request, reply) => {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  const requireVerify = isEmailVerificationRequired();
+  const now = new Date();
+
   const user = await prisma.user.create({
     data: {
       email: normalizedEmail,
       passwordHash,
+      emailVerifiedAt: requireVerify ? null : now,
+      accounts: {
+        create: {
+          provider: "credential",
+          providerAccountId: normalizedEmail,
+        },
+      },
     },
   });
 
-  const token = app.jwt.sign({ sub: user.id });
+  if (requireVerify) {
+    try {
+      const { verifyUrl } = await issueEmailVerification(user.id, user.email);
+      const exposeDevLink =
+        process.env.EXPOSE_DEV_VERIFY_LINK_IN_UI === "true";
+      return reply.code(201).send({
+        needsEmailVerification: true,
+        message:
+          "Check your email for a verification link before signing in.",
+        email: user.email,
+        ...(exposeDevLink && !isProduction
+          ? { devVerifyUrl: verifyUrl }
+          : {}),
+      });
+    } catch (err) {
+      request.log.error(err);
+      await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
+      return reply
+        .code(503)
+        .send({ error: "Could not send verification email. Try again." });
+    }
+  }
 
-  reply.setCookie("token", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: process.env.NODE_ENV === "production",
-  });
+  setSessionCookie(app, reply, user);
 
   return reply.code(201).send({
-    user: {
-      id: user.id,
-      email: user.email,
-      profileCompleted: user.profileCompletedAt != null,
-    },
+    user: serializeAuthUser(user),
   });
-});
+  },
+);
 
-app.post("/api/v1/auth/login", async (request, reply) => {
+app.post(
+  "/api/v1/auth/login",
+  {
+    config: {
+      rateLimit: { max: authRateLimitMax, timeWindow: "15 minutes" },
+    },
+  },
+  async (request, reply) => {
   const { email, password } = request.body as {
     email?: string;
     password?: string;
@@ -180,7 +328,10 @@ app.post("/api/v1/auth/login", async (request, reply) => {
     return reply.code(400).send({ error: "Email and password are required" });
   }
 
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return reply.code(401).send({ error: "Invalid email or password" });
+  }
 
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
@@ -189,7 +340,20 @@ app.post("/api/v1/auth/login", async (request, reply) => {
   const invalidCredentials = () =>
     reply.code(401).send({ error: "Invalid email or password" });
 
-  if (!user) {
+  if (!user || user.deletedAt) {
+    return invalidCredentials();
+  }
+
+  if (!user.passwordHash) {
+    const googleLinked = await prisma.account.findFirst({
+      where: { userId: user.id, provider: "google" },
+    });
+    if (googleLinked) {
+      return reply.code(401).send({
+        error: "This account uses Google sign-in.",
+        code: "USE_GOOGLE_SIGN_IN",
+      });
+    }
     return invalidCredentials();
   }
 
@@ -199,38 +363,356 @@ app.post("/api/v1/auth/login", async (request, reply) => {
     return invalidCredentials();
   }
 
-  const token = app.jwt.sign({ sub: user.id });
+  if (isEmailVerificationRequired() && !user.emailVerifiedAt) {
+    return reply.code(403).send({
+      error: "Verify your email before signing in. Check your inbox or resend the link.",
+      code: "EMAIL_NOT_VERIFIED",
+      email: user.email,
+    });
+  }
 
-  reply.setCookie("token", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    secure: process.env.NODE_ENV === "production",
-  });
+  setSessionCookie(app, reply, user);
 
   return reply.send({
-    user: {
-      id: user.id,
-      email: user.email,
-      profileCompleted: user.profileCompletedAt != null,
-    },
+    user: serializeAuthUser(user),
   });
-});
+  },
+);
+
+app.post(
+  "/api/v1/auth/verify-email",
+  {
+    config: {
+      rateLimit: { max: 20, timeWindow: "15 minutes" },
+    },
+  },
+  async (request, reply) => {
+    const { token } = request.body as { token?: string };
+    if (!token?.trim()) {
+      return reply.code(400).send({ error: "Verification token is required" });
+    }
+
+    const result = await verifyEmailWithToken(token.trim());
+    if (!result.ok) {
+      return reply.code(400).send({ error: result.error });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: result.userId },
+    });
+    if (!user || user.deletedAt) {
+      return reply.code(400).send({ error: "Invalid or expired verification link" });
+    }
+
+    setSessionCookie(app, reply, user);
+
+    return reply.send({
+      ok: true,
+      message: "Email verified. You are signed in.",
+      user: serializeAuthUser(user),
+    });
+  },
+);
+
+app.post(
+  "/api/v1/auth/resend-verification",
+  {
+    config: {
+      rateLimit: { max: 5, timeWindow: "15 minutes" },
+    },
+  },
+  async (request, reply) => {
+    const { email } = request.body as { email?: string };
+    if (!email?.trim()) {
+      return reply.code(400).send({ error: "Email is required" });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      return reply.send({
+        ok: true,
+        message: "If that account needs verification, we sent a new link.",
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user || user.deletedAt || user.emailVerifiedAt) {
+      return reply.send({
+        ok: true,
+        message: "If that account needs verification, we sent a new link.",
+      });
+    }
+
+    try {
+      const { verifyUrl } = await issueEmailVerification(user.id, user.email);
+      const exposeDevLink =
+        process.env.EXPOSE_DEV_VERIFY_LINK_IN_UI === "true";
+      return reply.send({
+        ok: true,
+        message: "If that account needs verification, we sent a new link.",
+        ...(!isProduction && exposeDevLink ? { devVerifyUrl: verifyUrl } : {}),
+      });
+    } catch (err) {
+      request.log.error(err);
+      return reply
+        .code(503)
+        .send({ error: "Could not send verification email. Try again." });
+    }
+  },
+);
+
+app.post(
+  "/api/v1/auth/me/change-password",
+  {
+    config: {
+      rateLimit: { max: 10, timeWindow: "15 minutes" },
+    },
+  },
+  async (request, reply) => {
+    const currentUser = await requireUser(app, request, reply);
+    if (!currentUser) return;
+
+    if (!currentUser.passwordHash) {
+      return reply.code(400).send({
+        error: "Password sign-in is not set for this account. Use Google or reset password via email.",
+      });
+    }
+
+    const { currentPassword, newPassword } = request.body as {
+      currentPassword?: string;
+      newPassword?: string;
+    };
+
+    if (!currentPassword || !newPassword) {
+      return reply
+        .code(400)
+        .send({ error: "Current password and new password are required" });
+    }
+
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+      return reply.code(400).send({ error: passwordError });
+    }
+
+    const matches = await bcrypt.compare(
+      currentPassword,
+      currentUser.passwordHash,
+    );
+    if (!matches) {
+      return reply.code(401).send({ error: "Current password is incorrect" });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const now = new Date();
+
+    const user = await prisma.user.update({
+      where: { id: currentUser.id },
+      data: { passwordHash, passwordChangedAt: now },
+    });
+
+    try {
+      await sendPasswordChangedEmail(user.email);
+    } catch (err) {
+      request.log.warn(err, "Password changed alert email failed");
+    }
+
+    setSessionCookie(app, reply, user);
+
+    return reply.send({
+      ok: true,
+      message: "Password updated.",
+      user: serializeAuthUser(user),
+    });
+  },
+);
+
+app.post(
+  "/api/v1/auth/forgot-password",
+  {
+    config: {
+      rateLimit: { max: 5, timeWindow: "15 minutes" },
+    },
+  },
+  async (request, reply) => {
+    const { email } = request.body as { email?: string };
+
+    if (!email?.trim()) {
+      return reply.code(400).send({ error: "Email is required" });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      return passwordResetResponse(
+        reply,
+        "That does not look like a valid email address.",
+        { status: "invalid_email" },
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      return passwordResetResponse(
+        reply,
+        "No PanChat account uses this email. Check for typos, or create an account.",
+        { status: "not_found" },
+      );
+    }
+
+    if (user.deletedAt) {
+      return passwordResetResponse(
+        reply,
+        "This account was deleted. Sign up again with a different email if you want a new account.",
+        { status: "deleted" },
+      );
+    }
+
+    const hasResend = Boolean(process.env.RESEND_API_KEY?.trim());
+
+    if (isProduction && !hasResend) {
+      request.log.error(
+        "Password reset blocked: RESEND_API_KEY is required in production",
+      );
+      return reply.code(503).send({
+        error:
+          "Password reset is temporarily unavailable. Please try again later.",
+      });
+    }
+
+    const { rawToken, tokenHash, expiresAt } = createPasswordResetToken();
+
+    await prisma.passwordResetToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+
+    await prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    const webOrigin = (
+      process.env.WEB_ORIGIN ?? "http://localhost:5173"
+    ).replace(/\/$/, "");
+    const resetUrl = `${webOrigin}/?reset=${rawToken}`;
+    const exposeDevLinkInUi =
+      process.env.EXPOSE_DEV_RESET_LINK_IN_UI === "true";
+
+    try {
+      await sendPasswordResetEmail({ to: user.email, resetUrl });
+    } catch (err) {
+      request.log.error(err);
+      return reply
+        .code(503)
+        .send({ error: "Could not send reset email. Try again later." });
+    }
+
+    if (!hasResend) {
+      return passwordResetResponse(
+        reply,
+        exposeDevLinkInUi
+          ? "Account found. Reset link below (dev only — also in API terminal)."
+          : "Account found. For safety the reset link is only in the API terminal (not in this browser). Set EXPOSE_DEV_RESET_LINK_IN_UI=true in .env only on your private machine if you need it here.",
+        exposeDevLinkInUi
+          ? { status: "dev_link", devResetUrl: resetUrl }
+          : { status: "dev_link" },
+      );
+    }
+
+    return passwordResetResponse(
+      reply,
+      "Reset email sent. Check your inbox and spam folder.",
+      { status: "email_sent" },
+    );
+  },
+);
+
+app.post(
+  "/api/v1/auth/reset-password",
+  {
+    config: {
+      rateLimit: { max: 10, timeWindow: "15 minutes" },
+    },
+  },
+  async (request, reply) => {
+    const { token, password } = request.body as {
+      token?: string;
+      password?: string;
+    };
+
+    if (!token?.trim() || !password) {
+      return reply
+        .code(400)
+        .send({ error: "Reset token and new password are required" });
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      return reply.code(400).send({ error: passwordError });
+    }
+
+    const tokenHash = hashResetToken(token.trim());
+    const resetRecord = await prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+
+    if (
+      !resetRecord ||
+      resetRecord.usedAt ||
+      resetRecord.expiresAt < new Date() ||
+      resetRecord.user.deletedAt
+    ) {
+      return reply.code(400).send({ error: "Invalid or expired reset link" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const now = new Date();
+
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.update({
+        where: { id: resetRecord.userId },
+        data: {
+          passwordHash,
+          passwordChangedAt: now,
+          emailVerifiedAt: resetRecord.user.emailVerifiedAt ?? now,
+        },
+      });
+      await tx.passwordResetToken.update({
+        where: { id: resetRecord.id },
+        data: { usedAt: now },
+      });
+      return u;
+    });
+
+    try {
+      await sendPasswordChangedEmail(updatedUser.email);
+    } catch (err) {
+      request.log.warn(err, "Password changed alert email failed");
+    }
+
+    clearSessionCookie(reply);
+
+    return reply.send({
+      ok: true,
+      message:
+        "Password updated. Sign in with your new password. Any other devices were signed out.",
+    });
+  },
+);
 
 app.get("/api/v1/auth/me", async (request, reply) => {
   const user = await requireUser(app, request, reply);
   if (!user) return;
-  return {
-    user: {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      displayName: user.displayName,
-      birthDate: user.birthDate,
-      profileCompleted: user.profileCompletedAt != null,
-      avatarUrl: user.avatarUrl,
-    },
-  };
+  return { user: serializeAuthUser(user) };
 });
 
 app.patch("/api/v1/auth/me/profile", async (request, reply) => {
@@ -243,17 +725,11 @@ app.patch("/api/v1/auth/me/profile", async (request, reply) => {
     birthDate?: string;
   };
 
-  const username = body.username?.trim();
-
-  if (!username) {
-    return reply.code(400).send({ error: "Username is required" });
+  const parsedUsername = parseUsername(body.username ?? "");
+  if ("error" in parsedUsername) {
+    return reply.code(400).send({ error: parsedUsername.error });
   }
-
-  if (username.length < 3) {
-    return reply
-      .code(400)
-      .send({ error: "Username must be at least 3 characters" });
-  }
+  const username = parsedUsername.value;
 
   const taken = await prisma.user.findUnique({
     where: { username },
@@ -263,13 +739,23 @@ app.patch("/api/v1/auth/me/profile", async (request, reply) => {
     return reply.code(409).send({ error: "Username already taken" });
   }
 
-  const displayName = body.displayName?.trim() || username;
+  let displayName = username;
+  if (body.displayName?.trim()) {
+    const parsedDisplay = parseDisplayName(body.displayName);
+    if (!parsedDisplay) {
+      return reply.code(400).send({ error: "Display name is too long" });
+    }
+    displayName = parsedDisplay;
+  }
 
   let birthDate: Date | undefined;
-  if (body.birthDate) {
-    birthDate = new Date(body.birthDate);
-    if (Number.isNaN(birthDate.getTime())) {
-      return reply.code(400).send({ error: "Invalid birth date" });
+  if (body.birthDate?.trim()) {
+    const parsedBirth = parseBirthDate(body.birthDate);
+    if (parsedBirth && "error" in parsedBirth) {
+      return reply.code(400).send({ error: parsedBirth.error });
+    }
+    if (parsedBirth && "value" in parsedBirth) {
+      birthDate = parsedBirth.value;
     }
   }
 
@@ -283,17 +769,90 @@ app.patch("/api/v1/auth/me/profile", async (request, reply) => {
     },
   });
 
+  return { user: serializeAuthUser(user) };
+});
+
+app.get("/api/v1/auth/me/export", async (request, reply) => {
+  const currentUser = await requireUser(app, request, reply);
+  if (!currentUser) return;
+
+  const [messagesSent, tasksAssigned, tasksCreated] = await Promise.all([
+    prisma.message.findMany({
+      where: { senderId: currentUser.id },
+      select: {
+        id: true,
+        threadId: true,
+        body: true,
+        deletedForEveryone: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.task.findMany({
+      where: { assigneeId: currentUser.id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.task.findMany({
+      where: { createdById: currentUser.id },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
   return {
-    user: {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      displayName: user.displayName,
-      birthDate: user.birthDate,
-      profileCompleted: user.profileCompletedAt != null,
-    },
+    exportedAt: new Date().toISOString(),
+    account: serializeAuthUser(currentUser),
+    messagesSent,
+    tasksAssignedToYou: tasksAssigned,
+    tasksYouCreated: tasksCreated,
   };
 });
+
+app.post(
+  "/api/v1/auth/me/delete",
+  {
+    config: {
+      rateLimit: { max: 5, timeWindow: "1 hour" },
+    },
+  },
+  async (request, reply) => {
+    const currentUser = await requireUser(app, request, reply);
+    if (!currentUser) return;
+
+    const { confirmEmail } = request.body as { confirmEmail?: string };
+    const normalized = confirmEmail?.trim().toLowerCase();
+
+    if (!normalized || normalized !== currentUser.email) {
+      return reply
+        .code(400)
+        .send({ error: "Confirm your email address to delete the account" });
+    }
+
+    const tombstoneEmail = `deleted+${currentUser.id}@deleted.panchat.local`;
+    const randomPassword = randomBytes(32).toString("hex");
+
+    await prisma.user.update({
+      where: { id: currentUser.id },
+      data: {
+        deletedAt: new Date(),
+        email: tombstoneEmail,
+        username: null,
+        displayName: "Deleted user",
+        avatarUrl: null,
+        birthDate: null,
+        passwordHash: await bcrypt.hash(randomPassword, 10),
+      },
+    });
+
+    reply.clearCookie("token", {
+      path: "/",
+      sameSite: "lax",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    return { ok: true };
+  },
+);
 
 const ALLOWED_AVATAR_TYPES = new Set([
   "image/jpeg",
@@ -343,17 +902,7 @@ app.post("/api/v1/auth/me/avatar", async (request, reply) => {
     });
   }
 
-  return {
-    user: {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      displayName: user.displayName,
-      birthDate: user.birthDate,
-      avatarUrl: user.avatarUrl,
-      profileCompleted: user.profileCompletedAt != null,
-    },
-  };
+  return { user: serializeAuthUser(user) };
 });
 
 app.get("/api/v1/users", async (request, reply) => {
@@ -381,11 +930,9 @@ app.post("/api/v1/threads", async (request, reply) => {
   const currentUser = await requireUser(app, request, reply);
   if (!currentUser) return;
 
-  const { peerUserId } = request.body as { peerUserId?: string };
-
-  if (!peerUserId) {
-    return reply.code(400).send({ error: "peerUserId is required" });
-  }
+  const { peerUserId: rawPeerId } = request.body as { peerUserId?: string };
+  const peerUserId = requireUuid(rawPeerId, reply);
+  if (!peerUserId) return;
 
   if (peerUserId === currentUser.id) {
     return reply
@@ -398,7 +945,7 @@ app.post("/api/v1/threads", async (request, reply) => {
   });
 
   if (!peer || peer.deletedAt || !peer.username) {
-    return reply.code(401).send({ error: "User not found" });
+    return reply.code(404).send({ error: "User not found" });
   }
 
   const [userLowId, userHighId] = orderUserPair(currentUser.id, peer.id);
@@ -435,22 +982,28 @@ app.post("/api/v1/threads/:id/messages", async (request, reply) => {
   const currentUser = await requireUser(app, request, reply);
   if (!currentUser) return;
 
-  const { id: threadId } = request.params as { id: string };
+  const { id: rawThreadId } = request.params as { id: string };
+  const threadId = requireUuid(rawThreadId, reply);
+  if (!threadId) return;
+
   const { body, task } = request.body as {
     body?: string;
     task?: { body?: string };
   };
 
-  const text = body?.trim();
-  const taskText = task?.body?.trim();
-
-  if (task && !taskText) {
-    return reply
-      .code(400)
-      .send({ error: "Task body is required when task is attached" });
+  const parsedMessage = parseMessageBody(body ?? "");
+  if ("error" in parsedMessage) {
+    return reply.code(400).send({ error: parsedMessage.error });
   }
-  if (!text) {
-    return reply.code(400).send({ error: "Message body is required" });
+  const text = parsedMessage.value;
+
+  let taskText: string | undefined;
+  if (task) {
+    const parsedTask = parseTaskBody(task.body ?? "");
+    if ("error" in parsedTask) {
+      return reply.code(400).send({ error: parsedTask.error });
+    }
+    taskText = parsedTask.value;
   }
 
   const thread = await prisma.thread.findUnique({
@@ -519,7 +1072,9 @@ app.get("/api/v1/threads/:id/messages", async (request, reply) => {
   const currentUser = await requireUser(app, request, reply);
   if (!currentUser) return;
 
-  const { id: threadId } = request.params as { id: string };
+  const { id: rawThreadId } = request.params as { id: string };
+  const threadId = requireUuid(rawThreadId, reply);
+  if (!threadId) return;
 
   const thread = await prisma.thread.findUnique({
     where: { id: threadId },
@@ -587,7 +1142,10 @@ app.delete("/api/v1/messages/:id", async (request, reply) => {
   const currentUser = await requireUser(app, request, reply);
   if (!currentUser) return;
 
-  const { id } = request.params as { id: string };
+  const { id: rawId } = request.params as { id: string };
+  const id = requireUuid(rawId, reply);
+  if (!id) return;
+
   const scope = (request.query as { scope?: string }).scope ?? "me";
 
   if (scope !== "me" && scope !== "everyone") {
@@ -703,10 +1261,13 @@ app.patch("/api/v1/tasks/:id", async (request, reply) => {
   const currentUser = await requireUser(app, request, reply);
   if (!currentUser) return;
 
-  const { id } = request.params as { id: string };
-  const { status } = request.body as { status?: string };
+  const { id: rawId } = request.params as { id: string };
+  const id = requireUuid(rawId, reply);
+  if (!id) return;
 
-  if (status !== "cleared" && status !== "deleted") {
+  const { status: rawStatus } = request.body as { status?: string };
+  const status = parseTaskStatus(rawStatus);
+  if (!status) {
     return reply.code(400).send({ error: "Status must be cleared or deleted" });
   }
 
@@ -824,19 +1385,12 @@ const start = async () => {
         return next(new Error("Not authenticated"));
       }
 
-      try {
-        const payload = await app.jwt.verify<{ sub: string }>(token);
-        const dbUser = await prisma.user.findUnique({
-          where: { id: payload.sub },
-        });
-        if (!dbUser || dbUser.deletedAt) {
-          return next(new Error("Not authenticated"));
-        }
-        socket.data.userId = dbUser.id;
-        next();
-      } catch {
-        next(new Error("Not authenticated"));
+      const dbUser = await authenticateSessionToken(app, token);
+      if (!dbUser) {
+        return next(new Error("Not authenticated"));
       }
+      socket.data.userId = dbUser.id;
+      next();
     });
 
     io.on("connection", (socket) => {

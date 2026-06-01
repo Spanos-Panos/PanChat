@@ -1,4 +1,14 @@
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+export const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+
+export class ApiError extends Error {
+  code?: string;
+
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+  }
+}
 
 type ApiOptions = {
   method?: string;
@@ -30,11 +40,10 @@ export async function apiFetch<T>(
   const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
+    const payload = data as { error?: string; code?: string };
     const message =
-      typeof data === "object" && data && "error" in data
-        ? String((data as { error: string }).error)
-        : res.statusText;
-    throw new Error(message);
+      typeof payload?.error === "string" ? payload.error : res.statusText;
+    throw new ApiError(message, payload?.code);
   }
 
   return data as T;

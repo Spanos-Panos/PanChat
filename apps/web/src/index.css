@@ -87,6 +87,16 @@ button {
   cursor: pointer;
 }
 
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+input:focus:not(:focus-visible) {
+  outline: none;
+}
+
 input::placeholder {
   color: var(--text-faint);
 }
