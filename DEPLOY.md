@@ -101,6 +101,8 @@ VITE_API_URL=https://your-api.up.railway.app
 
 ## Deploy steps (overview)
 
+Repo includes `railway.toml` (API) and `vercel.json` (web) at the project root.
+
 ### 1. Postgres (Neon)
 
 1. Create project at [neon.tech](https://neon.tech).
@@ -128,19 +130,22 @@ VITE_API_URL=https://your-api.up.railway.app
 
 ### 3. Web (Vercel)
 
-1. Import repo → framework **Vite** → root `apps/web`.
-2. Build: `pnpm build` (set install from monorepo root if needed).
-3. Output: `dist`.
-4. Env: `VITE_API_URL` = your Railway API URL.
-5. Deploy.
+1. Import GitHub repo on [vercel.com](https://vercel.com).
+2. **Root directory:** leave as repo root (uses `vercel.json`).
+3. Env: `VITE_API_URL` = `https://your-api.up.railway.app` (no trailing slash).
+4. Deploy → copy `https://….vercel.app`.
+5. On Railway, set `WEB_ORIGIN` to that Vercel URL and redeploy API.
+6. On Vercel, enable `COOKIE_CROSS_SITE=true` on API (Railway env) — required when web and API are different domains.
 
 ### 4. Google OAuth (production)
 
-In Google Cloud → Clients → add redirect URI:
+In Google Cloud → Clients → add redirect URI on the **API** host (Railway), not Vercel:
 
 ```text
 https://your-api.up.railway.app/api/v1/auth/google/callback
 ```
+
+(Local dev uses port **5173** via Vite proxy — see LAN section below.)
 
 ### 5. Smoke test (production)
 

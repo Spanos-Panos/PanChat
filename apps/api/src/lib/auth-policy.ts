@@ -21,6 +21,18 @@ export function apiPublicOrigin(): string {
   return base;
 }
 
+/** Google OAuth redirect — production uses API host; local dev uses Vite proxy on :5173. */
+export function googleOAuthCallbackUri(): string {
+  const explicit = process.env.GOOGLE_OAUTH_CALLBACK_URL?.trim();
+  if (explicit) {
+    return explicit.replace(/\/$/, "");
+  }
+  if (process.env.NODE_ENV === "production") {
+    return `${apiPublicOrigin()}/api/v1/auth/google/callback`;
+  }
+  return `${webOrigin()}/api/v1/auth/google/callback`;
+}
+
 /** Comma-separated in WEB_ORIGIN — e.g. localhost + LAN IP for phone + laptop together. */
 export function webOrigins(): string[] {
   const raw = process.env.WEB_ORIGIN ?? "http://localhost:5173";

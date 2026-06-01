@@ -1,0 +1,8 @@
+# PanChat API — deploy from repo root on Railway (see DEPLOY.md)
+[build]
+builder = "NIXPACKS"
+buildCommand = "pnpm install && pnpm --filter @panchat/api exec prisma generate && pnpm --filter @panchat/api exec prisma migrate deploy && pnpm --filter @panchat/api build"
+
+[deploy]
+startCommand = "pnpm --filter @panchat/api start"
+restartPolicyType = "ON_FAILURE"
