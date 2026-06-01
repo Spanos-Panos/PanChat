@@ -101,7 +101,9 @@ VITE_API_URL=https://your-api.up.railway.app
 
 ## Deploy steps (overview)
 
-Repo includes `railway.toml` (API) and `vercel.json` (web) at the project root.
+Repo includes `railway.toml`, `nixpacks.toml` (API), and `vercel.json` (web) at the project root.
+
+**Railway note:** `NODE_ENV=production` is correct at **runtime**, but the build must still install TypeScript — the repo puts `typescript` in API `dependencies` so `tsc` is available during deploy.
 
 ### 1. Postgres (Neon)
 

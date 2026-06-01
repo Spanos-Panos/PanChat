@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && prisma migrate deploy && tsc",
+    "build": "prisma generate && prisma migrate deploy && pnpm exec tsc",
     "start": "node dist/index.js"
   },
   "dependencies": {
@@ -22,12 +22,12 @@
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
     "fastify": "^5.2.1",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "typescript": "^5.7.3",
+    "@types/bcrypt": "^5.0.2",
+    "@types/node": "^22.10.7"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
-    "@types/node": "^22.10.7",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "tsx": "^4.19.2"
   }
 }
