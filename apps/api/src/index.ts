@@ -269,7 +269,9 @@ app.post(
   });
 
   if (existing) {
-    return reply.code(409).send({ error: "Email already in use" });
+    return reply
+      .code(409)
+      .send({ error: "Email already in use", code: "EMAIL_IN_USE" });
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -308,9 +310,10 @@ app.post(
     } catch (err) {
       request.log.error(err);
       await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
-      return reply
-        .code(503)
-        .send({ error: "Could not send verification email. Try again." });
+      return reply.code(503).send({
+        error: "Could not send verification email. Try again.",
+        code: "EMAIL_SEND_FAILED",
+      });
     }
   }
 
@@ -349,7 +352,10 @@ app.post(
   });
 
   const invalidCredentials = () =>
-    reply.code(401).send({ error: "Invalid email or password" });
+    reply.code(401).send({
+      error: "Invalid email or password",
+      code: "INVALID_CREDENTIALS",
+    });
 
   if (!user || user.deletedAt) {
     return invalidCredentials();
@@ -468,9 +474,10 @@ app.post(
       });
     } catch (err) {
       request.log.error(err);
-      return reply
-        .code(503)
-        .send({ error: "Could not send verification email. Try again." });
+      return reply.code(503).send({
+        error: "Could not send verification email. Try again.",
+        code: "EMAIL_SEND_FAILED",
+      });
     }
   },
 );
@@ -618,9 +625,10 @@ app.post(
       await sendPasswordResetEmail({ to: user.email, resetUrl });
     } catch (err) {
       request.log.error(err);
-      return reply
-        .code(503)
-        .send({ error: "Could not send reset email. Try again later." });
+      return reply.code(503).send({
+        error: "Could not send reset email. Try again later.",
+        code: "EMAIL_SEND_FAILED",
+      });
     }
 
     if (!hasResend) {

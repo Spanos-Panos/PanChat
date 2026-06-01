@@ -17,6 +17,8 @@ import {
   avatarSrc,
 } from "./lib/api";
 import { LIMITS } from "./lib/limits";
+import { friendlyAuthError } from "./lib/auth-messages";
+import { PasswordField } from "./components/PasswordField";
 import { PrivacyPage } from "./PrivacyPage";
 import { io, type Socket } from "socket.io-client";
 
@@ -330,9 +332,7 @@ function App() {
           applySessionUser(data.user);
           setAuthSuccess(data.message ?? "Email verified.");
         } catch (err) {
-          setError(
-            err instanceof Error ? err.message : "Verification failed",
-          );
+          setError(friendlyAuthError(err));
           setAuthView("verify-pending");
         } finally {
           setLoading(false);
@@ -909,9 +909,9 @@ function App() {
       if (err instanceof ApiError && err.code === "EMAIL_NOT_VERIFIED") {
         setPendingVerifyEmail(email);
         setAuthView("verify-pending");
-        setError(err.message);
+        setError(friendlyAuthError(err));
       } else {
-        setError(err instanceof Error ? err.message : "Login failed");
+        setError(friendlyAuthError(err));
       }
     } finally {
       setLoading(false);
@@ -934,9 +934,7 @@ function App() {
       setAuthSuccess(data.message);
       setDevVerifyUrl(data.devVerifyUrl ?? null);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Could not resend verification",
-      );
+      setError(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -969,9 +967,7 @@ function App() {
       setForgotDevResetUrl(data.hint?.devResetUrl ?? null);
       setForgotHintStatus(data.hint?.status ?? null);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to request password reset",
-      );
+      setError(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -1003,9 +999,7 @@ function App() {
       setResetToken("");
       setAuthView("login");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to reset password",
-      );
+      setError(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -1049,7 +1043,7 @@ function App() {
       }
     } catch (err) {
       setUser(null);
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(friendlyAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -2145,7 +2139,9 @@ function App() {
           <div className={styles.authForm}>
             <p className={styles.infoBanner}>
               {pendingVerifyEmail
-                ? `We sent a link to ${pendingVerifyEmail}. During local dev the link uses localhost — open it on the same laptop that runs pnpm dev:web (not on your phone). Or use Resend → Resend verification and open the new link on this PC.`
+                ? import.meta.env.PROD
+                  ? `We sent a verification link to ${pendingVerifyEmail}. Open it on this device, then return here to sign in. Check your spam folder if it doesn't arrive within a few minutes.`
+                  : `We sent a link to ${pendingVerifyEmail}. In local dev the link uses localhost — open it on the same laptop running the dev server (not on your phone), or tap Resend verification below.`
                 : "Check your email for the verification link."}
             </p>
             {devVerifyUrl && (
@@ -2197,20 +2193,15 @@ function App() {
                 maxLength={LIMITS.emailMax}
               />
             </label>
-            <label className={styles.fieldLabel}>
-              <span className={styles.fieldLabelText}>Password</span>
-              <input
-                className={styles.fieldInput}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={LIMITS.passwordMin}
-                maxLength={LIMITS.passwordMax}
-                autoComplete="current-password"
-                placeholder="••••••••"
-              />
-            </label>
+            <PasswordField
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              minLength={LIMITS.passwordMin}
+              maxLength={LIMITS.passwordMax}
+            />
             <p className={styles.authHelperRow}>
               <button
                 type="button"
@@ -2355,33 +2346,23 @@ function App() {
 
         {authView === "reset" && (
           <form className={styles.authForm} onSubmit={handleResetPassword}>
-            <label className={styles.fieldLabel}>
-              <span className={styles.fieldLabelText}>New password</span>
-              <input
-                className={styles.fieldInput}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={LIMITS.passwordMin}
-                maxLength={LIMITS.passwordMax}
-                autoComplete="new-password"
-                placeholder="At least 8 characters"
-              />
-            </label>
-            <label className={styles.fieldLabel}>
-              <span className={styles.fieldLabelText}>Confirm password</span>
-              <input
-                className={styles.fieldInput}
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={LIMITS.passwordMin}
-                maxLength={LIMITS.passwordMax}
-                autoComplete="new-password"
-              />
-            </label>
+            <PasswordField
+              label="New password"
+              value={password}
+              onChange={setPassword}
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              minLength={LIMITS.passwordMin}
+              maxLength={LIMITS.passwordMax}
+            />
+            <PasswordField
+              label="Confirm password"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              autoComplete="new-password"
+              minLength={LIMITS.passwordMin}
+              maxLength={LIMITS.passwordMax}
+            />
             {error && <p className={styles.errorBanner}>{error}</p>}
             {authSuccess && (
               <p className={styles.successBanner}>{authSuccess}</p>
@@ -2411,34 +2392,24 @@ function App() {
                 maxLength={LIMITS.emailMax}
               />
             </label>
-            <label className={styles.fieldLabel}>
-              <span className={styles.fieldLabelText}>Password</span>
-              <input
-                className={styles.fieldInput}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={LIMITS.passwordMin}
-                maxLength={LIMITS.passwordMax}
-                autoComplete="new-password"
-                placeholder="At least 8 characters"
-              />
-            </label>
-            <label className={styles.fieldLabel}>
-              <span className={styles.fieldLabelText}>Confirm password</span>
-              <input
-                className={styles.fieldInput}
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={LIMITS.passwordMin}
-                maxLength={LIMITS.passwordMax}
-                autoComplete="new-password"
-                placeholder="Repeat password"
-              />
-            </label>
+            <PasswordField
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              minLength={LIMITS.passwordMin}
+              maxLength={LIMITS.passwordMax}
+            />
+            <PasswordField
+              label="Confirm password"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+              autoComplete="new-password"
+              placeholder="Repeat password"
+              minLength={LIMITS.passwordMin}
+              maxLength={LIMITS.passwordMax}
+            />
             {error && <p className={styles.errorBanner}>{error}</p>}
             <button
               type="submit"

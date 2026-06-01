@@ -1124,6 +1124,43 @@
   gap: 0.4rem;
 }
 
+.passwordFieldWrap {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.passwordFieldWrap .fieldInput {
+  padding-right: 3.25rem;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 0.35rem;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  padding: 0.35rem 0.55rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.passwordToggle:hover {
+  color: var(--brand-hover);
+  background: var(--brand-muted);
+}
+
+.passwordToggle:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
 .fieldLabelText {
   font-size: 0.8125rem;
   font-weight: 600;
