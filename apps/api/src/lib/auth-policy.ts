@@ -21,8 +21,24 @@ export function apiPublicOrigin(): string {
   return base;
 }
 
+/** Comma-separated in WEB_ORIGIN — e.g. localhost + LAN IP for phone + laptop together. */
+export function webOrigins(): string[] {
+  const raw = process.env.WEB_ORIGIN ?? "http://localhost:5173";
+  const list = raw
+    .split(",")
+    .map((s) => s.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+  return list.length > 0 ? list : ["http://localhost:5173"];
+}
+
+/** First origin — used for links in email and OAuth return (put LAN IP first if you use a phone). */
 export function webOrigin(): string {
-  return (process.env.WEB_ORIGIN ?? "http://localhost:5173").replace(/\/$/, "");
+  return webOrigins()[0]!;
+}
+
+export function isAllowedWebOrigin(origin: string | undefined): boolean {
+  if (!origin) return true;
+  return webOrigins().includes(origin.replace(/\/$/, ""));
 }
 
 export function userEmailIsVerified(user: {

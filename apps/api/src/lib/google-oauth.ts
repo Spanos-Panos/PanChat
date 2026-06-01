@@ -8,11 +8,7 @@ const GOOGLE_OAUTH = {
   tokenPath: "/token",
 } as const;
 import { prisma } from "./prisma.js";
-import {
-  apiPublicOrigin,
-  isGoogleAuthEnabled,
-  webOrigin,
-} from "./auth-policy.js";
+import { isGoogleAuthEnabled, webOrigin } from "./auth-policy.js";
 import { setSessionCookie } from "./auth-cookies.js";
 import { normalizeEmail } from "./validate.js";
 
@@ -29,7 +25,8 @@ export async function registerGoogleAuth(app: FastifyInstance): Promise<void> {
 
   const clientId = process.env.GOOGLE_CLIENT_ID!.trim();
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET!.trim();
-  const callbackUri = `${apiPublicOrigin()}/api/v1/auth/google/callback`;
+  // Must match Google Console — use Vite port 5173 (proxied to API), not :4000
+  const callbackUri = `${webOrigin()}/api/v1/auth/google/callback`;
 
   await app.register(oauthPlugin, {
     name: "googleOAuth2",

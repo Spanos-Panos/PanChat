@@ -27,8 +27,9 @@ Update status as you implement. Link PRs/commits in the Notes column when useful
 | RLS on Postgres | **n/a** | See §1 — app uses one DB user via Prisma |
 | Forgot password | **done** | Email link in prod; dev terminal only; sessions revoked on reset |
 | Privacy policy / cookie banner | **partial** | In-app Privacy page + `PRIVACY.md` |
-| Account & data deletion API | **partial** | Export JSON + delete account (email confirm) |
-| Production HTTPS + secrets | **planned** | Required before public deploy |
+| Account & data deletion API | **done** | Export JSON + delete account (email confirm) |
+| Email verification + Google OAuth | **done** | See AUTH-ARCHITECTURE.md |
+| Production HTTPS + secrets | **partial** | See DEPLOY.md; `TRUST_PROXY` + cross-site cookies added |
 
 ---
 
@@ -249,9 +250,14 @@ Not legal advice — use as a **dev checklist**; get proper review before a publ
 
 ### Phase E — Production deploy
 
+See **[DEPLOY.md](./DEPLOY.md)** for step-by-step (Vercel web + Railway/Render API + Neon Postgres).
+
 - [ ] Managed Postgres (not open port 5433)
+- [ ] API on long-running host (not Vercel serverless) — Socket.io + uploads
+- [ ] `WEB_ORIGIN` + `VITE_API_URL` + `COOKIE_CROSS_SITE=true` when domains differ
 - [ ] Secrets in host vault, not `.env` on disk
-- [ ] Backups + migration strategy
+- [ ] Google + Resend production URLs configured
+- [ ] Backups + migration strategy (`prisma migrate deploy` in CI)
 - [ ] Monitoring (uptime, error rate)
 
 ---

@@ -374,7 +374,9 @@ function App() {
   useEffect(() => {
     if (!user) return;
 
-    const socket: Socket = io(API_BASE, { withCredentials: true });
+    const socket: Socket = API_BASE
+      ? io(API_BASE, { withCredentials: true })
+      : io({ withCredentials: true });
     socketRef.current = socket;
 
     socket.on("connect", () => {
@@ -941,7 +943,9 @@ function App() {
   }
 
   function startGoogleSignIn() {
-    window.location.href = `${API_BASE}/api/v1/auth/google`;
+    window.location.href = API_BASE
+      ? `${API_BASE}/api/v1/auth/google`
+      : "/api/v1/auth/google";
   }
 
   async function handleForgotPassword(e: FormEvent) {

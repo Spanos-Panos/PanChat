@@ -38,6 +38,9 @@ import { serializeAuthUser } from "./lib/auth-serialize.js";
 import {
   isEmailVerificationRequired,
   isGoogleAuthEnabled,
+  isAllowedWebOrigin,
+  webOrigin,
+  webOrigins,
 } from "./lib/auth-policy.js";
 import { issueEmailVerification, verifyEmailWithToken } from "./lib/email-verification.js";
 import { registerGoogleAuth } from "./lib/google-oauth.js";
@@ -154,6 +157,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const app = Fastify({
   logger: true,
   bodyLimit: 1_048_576,
+  trustProxy: isProduction || process.env.TRUST_PROXY === "true",
 });
 
 await app.register(helmet, {
@@ -185,7 +189,13 @@ app.setErrorHandler((error, request, reply) => {
 });
 
 await app.register(cors, {
-  origin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
+  origin: (origin, cb) => {
+    if (isAllowedWebOrigin(origin)) {
+      cb(null, true);
+      return;
+    }
+    cb(null, false);
+  },
   credentials: true,
   methods: ["GET", "HEAD", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
 });
@@ -599,10 +609,7 @@ app.post(
       },
     });
 
-    const webOrigin = (
-      process.env.WEB_ORIGIN ?? "http://localhost:5173"
-    ).replace(/\/$/, "");
-    const resetUrl = `${webOrigin}/?reset=${rawToken}`;
+    const resetUrl = `${webOrigin()}/?reset=${rawToken}`;
     const exposeDevLinkInUi =
       process.env.EXPOSE_DEV_RESET_LINK_IN_UI === "true";
 
@@ -1368,7 +1375,7 @@ const start = async () => {
 
     io = new Server(app.server, {
       cors: {
-        origin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
+        origin: webOrigins(),
         credentials: true,
       },
     });

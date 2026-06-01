@@ -4,9 +4,9 @@ Lightweight LAN messaging with **recipient-only inline tasks** and simple profil
 
 **Stack:** React 19 (Vite) · Fastify · PostgreSQL · Prisma · Docker · pnpm monorepo
 
-**Security & ship checklist:** [SECURITY-AND-SHIP-READINESS.md](./SECURITY-AND-SHIP-READINESS.md) · [Privacy](./PRIVACY.md)
+**Security & ship checklist:** [SECURITY-AND-SHIP-READINESS.md](./SECURITY-AND-SHIP-READINESS.md) · [Deploy guide](./DEPLOY.md) · [Privacy](./PRIVACY.md)
 
-**Current features:** email register/login · profile onboarding · avatar upload · global user list · 1-1 chat · **live messages (Socket.io)** · attach task on send · My tasks inbox · clear/delete task (recipient-only) · live avatar updates across tabs
+**Current features:** email register/login · **email verification** · **Google sign-in** · forgot password · profile onboarding · avatar upload · global user list · 1-1 chat · **live messages (Socket.io)** · attach task on send · My tasks inbox · clear/delete task (recipient-only) · live avatar updates across tabs
 
 ---
 
@@ -120,16 +120,13 @@ See **[AUTH-ARCHITECTURE.md](AUTH-ARCHITECTURE.md)** for how sign-in works, env 
 
 ### Password reset (dev)
 
-PanChat does **not** use a separate “verify email” step — signing up creates the account immediately.
+**Security:** Reset links go to the account’s **inbox** in production. In local dev without Resend, links print in the **API terminal** only.
 
-**Security:** Resetting a password requires the **link sent to that email** (production). Knowing someone’s email alone is **not** enough. In local dev, the link is printed in the **API terminal only** (not in the browser unless you opt in with `EXPOSE_DEV_RESET_LINK_IN_UI=true` on your private machine).
+See [AUTH-ARCHITECTURE.md](./AUTH-ARCHITECTURE.md) and [DEPLOY.md](./DEPLOY.md).
 
-1. On login, click **Forgot password?**
-2. Enter the **exact** email you used at register.
-3. In local dev (no `RESEND_API_KEY`), copy the link from the **API terminal**.
-4. Set a new password — the victim’s old sessions are signed out automatically.
+### Browsers & phones
 
-Production requires `RESEND_API_KEY` ([Resend](https://resend.com)) and uses a generic message so strangers cannot probe which emails exist.
+One build works in **Chrome, Edge, Brave, Opera, Firefox, and Safari** (modern versions). Test in **Chrome + Firefox** and one **phone browser** on your deployed HTTPS URL before the portfolio demo. Details: [DEPLOY.md § Browser & phone](./DEPLOY.md#browser--phone-compatibility).
 
 ---
 
@@ -169,8 +166,9 @@ Record with OBS or Windows Game Bar; mention stack in voiceover or title slide.
 | 1-1 chat + Socket.io live messages | Done |
 | Recipient-only tasks + My tasks UI | Done |
 | Avatar upload + live `user:updated` | Done |
-| Demo video + public README polish | **Next (Wave E)** |
-| LAN phone test | Optional before portfolio |
+| Auth (verify, Google, reset) | Done |
+| Production deploy | **Next** — [DEPLOY.md](./DEPLOY.md) |
+| Demo video + public repo | After first deploy |
 | Electron `.exe` | Later (v1.1) |
 
 Details: `thread-task-chat-brief.md` §21.2d · learning log: `panchat-learning-journal.md`

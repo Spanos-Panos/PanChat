@@ -1,4 +1,8 @@
-export const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
+/**
+ * Empty string = same origin as the page (Vite proxies /api → :4000).
+ * Use that for laptop + phone together. Set VITE_API_URL only if you skip the proxy.
+ */
+export const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
 
 export class ApiError extends Error {
   code?: string;

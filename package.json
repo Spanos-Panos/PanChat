@@ -5,6 +5,9 @@
     "description": "PanChat - LAN messaging with inline tasks",
     "scripts": {
         "dev:web": "pnpm --filter @panchat/web dev",
-        "dev:api": "pnpm --filter @panchat/api dev"
+        "dev:api": "pnpm --filter @panchat/api dev",
+        "build:web": "pnpm --filter @panchat/web build",
+        "build:api": "pnpm --filter @panchat/api build",
+        "build": "pnpm build:api && pnpm build:web"
     }
 }
