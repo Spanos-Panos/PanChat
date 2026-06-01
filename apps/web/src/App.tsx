@@ -1293,7 +1293,6 @@ function App() {
                   value={profileUsername}
                   onChange={(e) => setProfileUsername(e.target.value)}
                   required
-                  minLength={3}
                   placeholder="panos"
                   autoComplete="username"
                   minLength={LIMITS.usernameMin}
