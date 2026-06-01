@@ -79,7 +79,7 @@ NODE_ENV=production
 DATABASE_URL=postgresql://...neon.tech/...?sslmode=require
 JWT_SECRET=<64-char-random>
 API_HOST=0.0.0.0
-API_PORT=4000
+# Local only — Railway injects PORT; do not set API_PORT on Railway
 API_PUBLIC_URL=https://your-api.up.railway.app
 WEB_ORIGIN=https://your-app.vercel.app
 AUTH_REQUIRE_EMAIL_VERIFICATION=true

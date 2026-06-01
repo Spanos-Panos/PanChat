@@ -150,7 +150,8 @@ if (!jwtSecret) {
 }
 
 const host = process.env.API_HOST ?? "0.0.0.0";
-const port = Number(process.env.API_PORT ?? 4000);
+// Railway (and most PaaS) set PORT; local dev uses API_PORT or 4000
+const port = Number(process.env.PORT ?? process.env.API_PORT ?? 4000);
 
 const isProduction = process.env.NODE_ENV === "production";
 
