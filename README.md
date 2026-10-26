@@ -1,5 +1,7 @@
 # PanChat
 
+![PanChat demo](docs/demo.gif)
+
 Lightweight LAN messaging with **recipient-only inline tasks** and simple profiles. A full-stack learning and portfolio project by Panos.
 
 **Stack:** React 19 (Vite) · Fastify · PostgreSQL · Prisma · Docker · pnpm monorepo
@@ -168,7 +170,7 @@ Record with OBS or Windows Game Bar; mention stack in voiceover or title slide.
 | Avatar upload + live `user:updated` | Done |
 | Auth (verify, Google, reset) | Done |
 | Production deploy | **Next** — [DEPLOY.md](./DEPLOY.md) |
-| Demo video + public repo | After first deploy |
+| Demo video + public repo | Done |
 | Electron `.exe` | Later (v1.1) |
 
 Details: `thread-task-chat-brief.md` §21.2d · learning log: `panchat-learning-journal.md`

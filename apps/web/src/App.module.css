@@ -1342,7 +1342,7 @@
 .taskSentHint {
   margin: 0.35rem 0 0;
   font-size: 0.75rem;
-  color: #737373;
+  color: rgba(255, 255, 255, 0.75);
   font-style: italic;
 }
 
